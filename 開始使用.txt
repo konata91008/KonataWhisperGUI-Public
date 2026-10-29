@@ -1,0 +1,26 @@
+TJKSub v4.9.2 · 2026-10-29
+
+每天使用，只要雙擊：
+  Mac      → start_mac.command
+  Windows  → Start_Windows.bat
+
+首次使用請先安裝 Python 3.10–3.12；Windows 使用 64 位元版本。
+啟動器會準備 Python 套件，接著在介面完成顯卡偵測、工具安裝與引擎編譯。
+這是原始碼發行版，不包含預先編譯的引擎或模型；首次設定需要網路與編譯時間。
+
+齒輪選單包含顯卡與引擎設定、API 設定，以及 GitHub 更新。
+tools/ 是設定／更新捷徑；WhisperGUI/ 是主程式；whisper.cpp/ 是引擎與模型位置。
+請保留整個資料夾，不要只搬走啟動檔；桌面請使用替身／捷徑。
+
+想使用介面內的自動更新，請安裝 Git，並執行：
+git clone https://github.com/konata91008/KonataWhisperGUI-Public.git
+
+公開 HTTPS 下載與更新不需要 GitHub 帳號或私人庫權限。
+保留 .git、main 分支與原本的 origin，才可使用齒輪內的更新功能。
+下載 ZIP 可以啟動與設定，但不能直接使用 Git 自動更新。
+更新前需處理尚未提交的本機修改；確認更新後才套用，再選擇是否重啟。
+
+由其他安裝切換：在新資料夾 clone 此公開版，保留舊安裝作備份。
+不要合併不同歷史或強制同步；模型可自行複製，GPU 引擎需在新位置重新設定。
+
+完整說明請看 README.md。Windows 顯卡安裝、編譯與轉錄仍待實機驗證。

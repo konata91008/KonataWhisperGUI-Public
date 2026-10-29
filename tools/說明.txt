@@ -1,0 +1,14 @@
+一般使用請回到上一層，開 start_mac.command（Mac）或 Start_Windows.bat（Windows）。
+主視窗齒輪已包含以下功能，這些捷徑僅供直接進入對應視窗：
+
+setup_mac.command / setup_windows.bat
+  開啟顯卡與引擎設定。
+
+sync_from_github.command / sync_from_github.bat
+  開啟更新視窗；確認後套用，完成後選擇是否重啟。
+  更新來源是 konata91008/KonataWhisperGUI-Public 的 main 分支。
+  以 HTTPS clone 的公開版不需要 GitHub 登入；ZIP 安裝不支援 Git 更新。
+
+程式已開啟時，請使用原視窗的齒輪。
+保留 tools 在專案內的位置，不要單獨搬走腳本。
+完整說明與驗證範圍請看上一層 README.md。

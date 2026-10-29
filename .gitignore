@@ -1,0 +1,22 @@
+venv/
+__pycache__/
+*.pyc
+.DS_Store
+.gradle/
+whisper.cpp.backup/
+whisper.cpp.new/
+whisper.cpp/models/*.bin
+
+# Per-machine GPU toolchains and build state
+whisper.cpp/build/
+venv.backup-*/
+
+# Keep local credentials and caches out of releases
+.venv/
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
