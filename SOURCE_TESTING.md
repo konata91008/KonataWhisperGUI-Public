@@ -4,6 +4,8 @@
 
 ## 自動化範圍
 
+- `Source Python compatibility`：Windows、Mac Apple Silicon、Mac Intel 使用 Python 3.10／3.11 的空白 venv，由一般設定啟動器安裝套件、開啟介面並跑回歸測試；Python 3.12 由下列完整流程驗證。
+
 - `Desktop packages`：Windows、Mac Apple Silicon、Mac Intel 的全新 Python 環境、一般啟動器、損壞環境備份、殘缺套件修復及中文／空白路徑。測試使用暫存副本，不動使用者模型。
 - `Source setup and CUDA`：使用與設定視窗相同的工具偵測、安裝及 `build_gpu()`。Windows 經 NVIDIA 官方 redistributable 安裝 CUDA（每包 SHA256 與大小均鎖定），經 WinGet 安裝 FFmpeg；測試 Pascal `sm_61` 與 Blackwell `sm_121`。其中一組另安裝 Visual Studio Build Tools。Vulkan 與兩種 Mac 架構也執行原始碼編譯流程。
 - CUDA 編譯測試使用明確標示的 CI 架構輸入；沒有模擬成功的 NVIDIA 驅動或 GPU 執行結果。CI 會實際嘗試啟動 CUDA 引擎。若測試機缺少 NVIDIA 驅動的 `nvcuda.dll`，則用 Visual Studio `dumpbin` 遞迴檢查引擎與 CUDA DLL 相依，只有缺少這一個驅動時才記為硬體限制；其他缺檔或錯誤仍會失敗。此情況不啟用該引擎、不執行 CUDA 版轉錄，也不提供假驅動。Vulkan／Metal 與封裝工作流程以明確指定的 CPU 測試 FFmpeg → Whisper → SRT／TXT，涵蓋中文／空白模型與音訊路徑。
