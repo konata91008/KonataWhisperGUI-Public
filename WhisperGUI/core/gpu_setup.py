@@ -5,6 +5,7 @@ Vulkan/Metal compile their shaders for the device through its driver at runtime.
 No CPU build or automatic CPU fallback is offered by this module.
 """
 import csv
+from contextlib import nullcontext
 import io
 import json
 import os
@@ -14,9 +15,11 @@ import shutil
 import subprocess
 import sys
 import time
+import tempfile
 import uuid
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
+from .cuda_download import install_cuda, toolchain_root
 
 
 class SetupError(RuntimeError):
@@ -208,6 +211,7 @@ def scan_host():
         smi = which('nvidia-smi') or str(Path(env.get('SystemRoot', r'C:\Windows')) / 'System32/nvidia-smi.exe')
         scan.gpus.extend(parse_nvidia(capture([smi, '--query-gpu=index,uuid,name,compute_cap,driver_version', '--format=csv,noheader'])))
         cuda_roots = list((pf / 'NVIDIA GPU Computing Toolkit/CUDA').glob('v*'))
+        cuda_roots.extend(p for p in toolchain_root().glob('v*') if (p / 'tjksub-cuda.json').is_file())
         if env.get('CUDA_PATH'):
             cuda_roots.append(Path(env['CUDA_PATH']))
         scan.tools['cuda'] = []
@@ -318,13 +322,6 @@ def run_logged(args, log, env=None, cwd=None, timeout=3600):
             raise SetupError(f'工具結束代碼 {process.returncode}。若安裝程式要求重開機，請先重開機再重新偵測。詳細原因請看上方記錄。')
 
 
-def cuda_install_args(version):
-    # Install only build/runtime components; keep the user's display driver.
-    parts = ('nvcc', 'cudart', 'cublas', 'cublas_dev', 'thrust', 'visual_studio_integration')
-    # Match WinGet's official manifest: also silence the self-extracting wrapper.
-    return '-y -gm2 -s -n ' + ' '.join(f'{part}_{version}' for part in parts)
-
-
 def install_tools(scan, gpu, log, runner=run_logged, unattended=False):
     missing = missing_tools(scan, gpu)
     env = scan.tools.get('env') or refreshed_env()
@@ -348,10 +345,6 @@ def install_tools(scan, gpu, log, runner=run_logged, unattended=False):
                     '--passive', '--norestart'], log, env=env, timeout=None)
         elif any(x.startswith('Visual Studio') for x in missing):
             packages.append(('Microsoft.VisualStudio.2022.BuildTools', ['--override', '--wait --passive --norestart --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended']))
-        if any(x.startswith('CUDA Toolkit') for x in missing):
-            version = cuda_package_version(gpu)
-            packages.append(('Nvidia.CUDA', ['--version', version, '--force',
-                                             '--override', cuda_install_args(version)]))
         if 'Vulkan SDK' in missing: packages.append(('KhronosGroup.VulkanSDK', []))
         if any(x.startswith('FFmpeg') for x in missing): packages.append(('Gyan.FFmpeg', []))
         if packages and not scan.tools.get('winget'):
@@ -359,9 +352,11 @@ def install_tools(scan, gpu, log, runner=run_logged, unattended=False):
         for package, extra in packages:
             # Source/package terms are displayed in the plan before this user-initiated action.
             runner([scan.tools['winget'], 'install', '--id', package, '--exact', '--source', 'winget',
-                    '--silent' if unattended or package == 'Nvidia.CUDA' else '--interactive',
+                    '--silent' if unattended else '--interactive',
                     '--accept-source-agreements', '--accept-package-agreements'] + extra,
                    log, env=env, timeout=None)
+        if any(x.startswith('CUDA Toolkit') for x in missing):
+            install_cuda(cuda_package_version(gpu), log)
 
 
 def validate_selection(scan, gpu):
@@ -454,38 +449,61 @@ def build_gpu(root, scan, gpu, log, install=False, runner=run_logged, scanner=sc
     if gpu.backend == 'vulkan' and not gpu.identity:
         raise SetupError('Vulkan 驅動未回報這張顯卡；請更新原廠驅動後重新偵測。不會改用 CPU。')
     suffix = '-sm' + gpu.cc if gpu.backend == 'cuda' else ''
-    build = source / 'build/tjksub' / (f'{scan.system.lower()}-{scan.machine}-{gpu.backend}{suffix}-' + uuid.uuid4().hex[:8])
-    build.mkdir(parents=True)
-    env = dict(scan.tools.get('env') or refreshed_env())
-    bins, device_env = [], {}
-    if gpu.backend == 'cuda':
-        kit = cuda_toolkit(scan, gpu)
-        bins.append(str(Path(kit['root']) / 'bin'))
-        device_env['CUDA_VISIBLE_DEVICES'] = gpu.identity
-    elif gpu.backend == 'vulkan':
-        env['VULKAN_SDK'] = scan.tools['vulkan_sdk']
-        device_env['GGML_VK_VISIBLE_DEVICES'] = gpu.identity
-    if scan.tools.get('ffmpeg'): bins.append(str(Path(scan.tools['ffmpeg']).parent))
-    env['PATH'] = os.pathsep.join(bins + [env.get('PATH', '')])
-    env.update(device_env)
-    command = cmake_command(source, build, scan, gpu)
-    runner(command, log, env=env)
-    runner([scan.tools['cmake'], '--build', str(build), '--config', 'Release', '--target', 'whisper-cli',
-            '--parallel', str(min(os.cpu_count() or 2, 8))], log, env=env)
-    candidates = [build / 'bin/Release/whisper-cli.exe', build / 'bin/whisper-cli.exe'] if scan.system == 'Windows' else [build / 'bin/whisper-cli']
-    exe = next((p for p in candidates if p.is_file()), None)
-    if not exe: raise SetupError('編譯結束但找不到 whisper-cli；保留原本的引擎。')
-    runner([str(exe), '--help'], log, env=env, cwd=str(exe.parent), timeout=30)
-    data = {'schema': 1, 'system': scan.system, 'machine': scan.machine, 'backend': gpu.backend,
-            'gpu': asdict(gpu), 'executable': str(exe.relative_to(root)), 'runtime_bins': bins,
-            'device_env': device_env, 'built_at': time.strftime('%Y-%m-%d %H:%M:%S'),
-            'configure': command, 'verification': 'compiled-and-launchable'}
-    destination = runtime_file(root)
-    temporary = destination.with_suffix('.json.tmp')
-    temporary.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding='utf-8')
-    os.replace(temporary, destination)
-    log('GPU 引擎編譯與啟動檢查完成。首次轉錄會再次確認 GPU 初始化；若失敗就停止，不會以 CPU 繼續。')
-    return data
+    installed_build = source / 'build/tjksub' / (f'{scan.system.lower()}-{scan.machine}-{gpu.backend}{suffix}-' + uuid.uuid4().hex[:8])
+    workspace = tempfile.TemporaryDirectory(prefix='tjk-') if scan.system == 'Windows' else nullcontext(str(installed_build))
+    with workspace as working:
+        build = Path(working)
+        if scan.system == 'Windows' and len(str(build)) > 80:
+            raise SetupError('Windows 暫存路徑過長。請將 TEMP/TMP 指向較短且可寫入的資料夾，重新啟動後再編譯。')
+        try:
+            build.mkdir(parents=True, exist_ok=True)
+            env = dict(scan.tools.get('env') or refreshed_env())
+            bins, device_env = [], {}
+            if gpu.backend == 'cuda':
+                kit = cuda_toolkit(scan, gpu)
+                bins.append(str(Path(kit['root']) / 'bin'))
+                device_env['CUDA_VISIBLE_DEVICES'] = gpu.identity
+            elif gpu.backend == 'vulkan':
+                env['VULKAN_SDK'] = scan.tools['vulkan_sdk']
+                device_env['GGML_VK_VISIBLE_DEVICES'] = gpu.identity
+            if scan.tools.get('ffmpeg'): bins.append(str(Path(scan.tools['ffmpeg']).parent))
+            env['PATH'] = os.pathsep.join(bins + [env.get('PATH', '')])
+            env.update(device_env)
+            command = cmake_command(source, build, scan, gpu)
+            runner(command, log, env=env)
+            runner([scan.tools['cmake'], '--build', str(build), '--config', 'Release', '--target', 'whisper-cli',
+                    '--parallel', str(min(os.cpu_count() or 2, 8))], log, env=env)
+            candidates = [build / 'bin/Release/whisper-cli.exe', build / 'bin/whisper-cli.exe'] if scan.system == 'Windows' else [build / 'bin/whisper-cli']
+            exe = next((p for p in candidates if p.is_file()), None)
+            if not exe: raise SetupError('編譯結束但找不到 whisper-cli；保留原本的引擎。')
+            if scan.system == 'Windows':
+                # The static executable is the only generated runtime asset; CUDA DLLs
+                # are loaded from the selected Toolkit and Vulkan from the driver.
+                installed_build.mkdir(parents=True, exist_ok=True)
+                destination_exe = installed_build / 'whisper-cli.exe'
+                shutil.copy2(exe, destination_exe)
+                exe = destination_exe
+            runner([str(exe), '--help'], log, env=env, cwd=str(exe.parent), timeout=30)
+            data = {'schema': 1, 'system': scan.system, 'machine': scan.machine, 'backend': gpu.backend,
+                    'gpu': asdict(gpu), 'executable': str(exe.relative_to(root)), 'runtime_bins': bins,
+                    'device_env': device_env, 'built_at': time.strftime('%Y-%m-%d %H:%M:%S'),
+                    'configure': command, 'verification': 'compiled-and-launchable'}
+            destination = runtime_file(root)
+            temporary = destination.with_suffix('.json.tmp')
+            temporary.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding='utf-8')
+            os.replace(temporary, destination)
+            log('GPU 引擎編譯與啟動檢查完成。首次轉錄會再次確認 GPU 初始化；若失敗就停止，不會以 CPU 繼續。')
+            return data
+
+        finally:
+            if scan.system == 'Windows':
+                # Retain compiler diagnostics even when the temporary build fails.
+                installed_build.mkdir(parents=True, exist_ok=True)
+                for index, report in enumerate(build.rglob('CMakeConfigureLog.yaml')):
+                    try:
+                        shutil.copy2(report, installed_build / f'configure-{index}.yaml')
+                    except OSError as exc:
+                        log(f'無法保存編譯診斷：{exc}')
 
 
 def gpu_log_state(line, backend):

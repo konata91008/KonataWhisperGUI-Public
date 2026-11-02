@@ -54,7 +54,7 @@ Mac 需求為 macOS 12 以上及可用的 Metal GPU。Windows 需求為 x64 處�
 - Windows NVIDIA：由驅動讀取 Compute Capability，確認 CUDA 工具支援該架構後編譯。
 - Windows AMD／Intel：使用 Vulkan，驗證驅動提供的實體 GPU 後編譯。
 
-CUDA 設定會檢查架構支援、必要函式庫及 Visual Studio 整合檔；缺少元件時可重新安裝。CUDA 安裝只補編譯工具，不替換現有 NVIDIA 顯示卡驅動。詳細測試範圍與實機驗證指令見 [原始碼測試說明](SOURCE_TESTING.md)。
+CUDA 設定會檢查架構支援、必要函式庫及 Visual Studio 整合檔；缺少元件時可重新安裝。CUDA 使用 NVIDIA 官方元件並核對 SHA256，安裝至使用者資料夾；不替換 NVIDIA 驅動，也不註冊 Visual Studio IDE 外掛。詳細測試範圍與實機驗證指令見 [原始碼測試說明](SOURCE_TESTING.md)。
 
 編譯結果放在 `whisper.cpp/build/tjksub/`，成功後透過 `whisper.cpp/build/tjksub-runtime.json` 指定使用的引擎。GPU 初始化失敗會停止轉錄，不會自行改用 CPU 模式；GPU 加速仍會使用 CPU 做音訊前處理與部分工作。
 

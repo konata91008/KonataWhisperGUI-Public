@@ -4,6 +4,7 @@ on:
     branches: [main]
     paths:
       - 'WhisperGUI/core/gpu_setup.py'
+      - 'WhisperGUI/core/cuda_*'
       - 'WhisperGUI/gui/gpu_dialog.py'
       - 'tools/**'
       - 'tests/test_gpu*'
@@ -16,8 +17,8 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: source-setup-${{ github.ref }}
-  cancel-in-progress: true
+  group: source-setup-${{ github.ref }}-${{ github.sha }}
+  cancel-in-progress: false
 jobs:
   cuda:
     name: Windows CUDA sm_${{ matrix.cc }}
@@ -65,6 +66,7 @@ jobs:
             build/*.log
             whisper.cpp/build/tjksub-runtime.json
             whisper.cpp/build/tjksub/**/CMakeFiles/CMakeConfigureLog.yaml
+            whisper.cpp/build/tjksub/**/configure-*.yaml
           if-no-files-found: warn
 
   source-other:
@@ -124,4 +126,5 @@ jobs:
             build/*.log
             whisper.cpp/build/tjksub-runtime.json
             whisper.cpp/build/tjksub/**/CMakeFiles/CMakeConfigureLog.yaml
+            whisper.cpp/build/tjksub/**/configure-*.yaml
           if-no-files-found: warn

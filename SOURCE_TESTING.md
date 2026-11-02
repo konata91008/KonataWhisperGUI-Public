@@ -5,7 +5,7 @@
 ## 自動化範圍
 
 - `Desktop packages`：Windows、Mac Apple Silicon、Mac Intel 的全新 Python 環境、一般啟動器、損壞環境備份、殘缺套件修復及中文／空白路徑。測試使用暫存副本，不動使用者模型。
-- `Source setup and CUDA`：使用與設定視窗相同的工具偵測、安裝及 `build_gpu()`。Windows 經 WinGet 安裝 CUDA／FFmpeg；測試 Pascal `sm_61` 與 Blackwell `sm_121`。其中一組另安裝 Visual Studio Build Tools。Vulkan 與兩種 Mac 架構也執行原始碼編譯流程。
+- `Source setup and CUDA`：使用與設定視窗相同的工具偵測、安裝及 `build_gpu()`。Windows 經 NVIDIA 官方 redistributable 安裝 CUDA（每包 SHA256 與大小均鎖定），經 WinGet 安裝 FFmpeg；測試 Pascal `sm_61` 與 Blackwell `sm_121`。其中一組另安裝 Visual Studio Build Tools。Vulkan 與兩種 Mac 架構也執行原始碼編譯流程。
 - CUDA 編譯測試使用明確標示的 CI 架構輸入；沒有模擬成功的 NVIDIA 驅動或 GPU 執行結果。啟動檢查後，以明確指定的 CPU 測試 FFmpeg → Whisper → SRT／TXT，涵蓋中文／空白模型與音訊路徑。
 - 回歸測試涵蓋工具缺漏、CUDA 架構選擇、安裝順序、重新偵測、失敗保留舊引擎、GUI 授權勾選及工作中關閉保護。
 
@@ -35,7 +35,7 @@ venv/bin/python tools/verify_source_setup.py --backend metal
 
 成功會產生 `build/source-setup.json` 與 `build/gpu-transcription.json`。實機模式必須收到引擎確認啟用選定 GPU 的訊息，且 SRT／TXT 匯出通過才算成功；不會自動以 CPU 代替。測試成功後使用新編譯引擎，失敗則保留原有設定。
 
-`--install-tools` 可在明確同意原廠授權與套件來源條款後補裝工具。Windows 可能出現 UAC；Mac 缺 Apple Command Line Tools 時需先完成 Apple 視窗，再執行一次。CUDA 僅安裝編譯所需元件，不更換顯示卡驅動。
+`--install-tools` 可在明確同意原廠授權與套件來源條款後補裝工具。Windows 可能出現 UAC；Mac 缺 Apple Command Line Tools 時需先完成 Apple 視窗，再執行一次。CUDA 僅安裝編譯所需元件，不更換顯示卡驅動，也不執行 Visual Studio IDE 外掛註冊。工具位於 `%LOCALAPPDATA%/TJKSub/toolchains`，原有系統 CUDA 仍可使用；新工具完整下載並驗證後才加入偵測清單。
 
 ## 驗證限制
 

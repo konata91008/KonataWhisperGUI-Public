@@ -1,0 +1,84 @@
+{
+  "12.9": {
+    "release": "12.9.1",
+    "packages": [
+      {
+        "component": "cuda_nvcc",
+        "path": "cuda_nvcc/windows-x86_64/cuda_nvcc-windows-x86_64-12.9.86-archive.zip",
+        "sha256": "227b109663b5e57d2718bcabb24a4ba0d9d4e52d958e327dc476f7c28691be85",
+        "size": 126917884
+      },
+      {
+        "component": "cuda_cudart",
+        "path": "cuda_cudart/windows-x86_64/cuda_cudart-windows-x86_64-12.9.79-archive.zip",
+        "sha256": "179e9c43b0735ffe67207b3da556eb5a0c50f3047961882b7657d3b822d34ef8",
+        "size": 3521238
+      },
+      {
+        "component": "libcublas",
+        "path": "libcublas/windows-x86_64/libcublas-windows-x86_64-12.9.1.4-archive.zip",
+        "sha256": "d534d98b0b453a98914dbf3adf47d7e84b55037abf02f87466439e1dcef581ed",
+        "size": 549755186
+      },
+      {
+        "component": "visual_studio_integration",
+        "path": "visual_studio_integration/windows-x86_64/visual_studio_integration-windows-x86_64-12.9.79-archive.zip",
+        "sha256": "d5b6514866395f52f04107da1aa523954f8dc76daf18a9f8699c3d564f294449",
+        "size": 864204
+      },
+      {
+        "component": "cuda_cccl",
+        "path": "cuda_cccl/windows-x86_64/cuda_cccl-windows-x86_64-12.9.27-archive.zip",
+        "sha256": "17aaa7c6b8f94a417d8f3261780b7e34b9cbdfab7513bce86768623b06aa28b5",
+        "size": 3127658
+      }
+    ]
+  },
+  "13.4": {
+    "release": "13.4.1",
+    "packages": [
+      {
+        "component": "cuda_nvcc",
+        "path": "cuda_nvcc/windows-x86_64/cuda_nvcc-windows-x86_64-13.4.59-archive.zip",
+        "sha256": "06a4fe6ec543030c5e5a7b85493cda90612015d9fff2a54ed0227162c937ea46",
+        "size": 32989100
+      },
+      {
+        "component": "cuda_cudart",
+        "path": "cuda_cudart/windows-x86_64/cuda_cudart-windows-x86_64-13.4.49-archive.zip",
+        "sha256": "e6663f3d3e8949eedc2d5ab92c7c5b9fa3f2a222086d91c42bfc5a38bf2b0225",
+        "size": 2736140
+      },
+      {
+        "component": "libcublas",
+        "path": "libcublas/windows-x86_64/libcublas-windows-x86_64-13.7.0.27-archive.zip",
+        "sha256": "fff93984ee8a85dd8568e4b9000f9e3ef7153f0f73b176756bcbad3c6622d1f0",
+        "size": 423620712
+      },
+      {
+        "component": "visual_studio_integration",
+        "path": "visual_studio_integration/windows-x86_64/visual_studio_integration-windows-x86_64-13.4.49-archive.zip",
+        "sha256": "b74a3482b0b8fccf3db751c3c2eb623924ebbc3731df15743e75e08dd434ab8e",
+        "size": 889506
+      },
+      {
+        "component": "cuda_crt",
+        "path": "cuda_crt/windows-x86_64/cuda_crt-windows-x86_64-13.4.59-archive.zip",
+        "sha256": "f969a0e3b086a48f940563cd1b965cb5197fd9540c79cc952b1abfa479f9ede7",
+        "size": 166601
+      },
+      {
+        "component": "cccl",
+        "path": "cccl/windows-x86_64/cccl-windows-x86_64-13.3.4.2.1-archive.zip",
+        "sha256": "ea3ebdd98d4d98819cc26b66bc5a0931004ed35ff18eea8b93e0bd2c8bfa5d7c",
+        "size": 4022245
+      },
+      {
+        "component": "libnvvm",
+        "path": "libnvvm/windows-x86_64/libnvvm-windows-x86_64-13.4.59-archive.zip",
+        "sha256": "a7a07bcc21cc05bce83eedebcbcd9b9f5418c58316b0fa28a57cb2c548b29841",
+        "size": 60031482
+      }
+    ]
+  }
+}

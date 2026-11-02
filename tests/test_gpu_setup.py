@@ -75,18 +75,12 @@ class GPUSetupTests(unittest.TestCase):
     def test_install_order_and_no_display_driver_changes(self):
         scan, gpu = self.windows(); scan.tools.update(vs='', cuda=[])
         calls = []
-        with patch.object(gs, 'capture', return_value='cmake version 3.31.10'):
+        with patch.object(gs, 'capture', return_value='cmake version 3.31.10'), \
+             patch.object(gs, 'install_cuda', side_effect=lambda version, log: calls.append(['CUDA', version])):
             gs.install_tools(scan, gpu, lambda _: None, runner=lambda args, *a, **kw: calls.append(args))
         self.assertIn('Microsoft.VisualStudio.2022.BuildTools', calls[0])
-        self.assertIn('Nvidia.CUDA', calls[1])
-        self.assertIn('--force', calls[1])
-        override = calls[1][calls[1].index('--override') + 1]
-        self.assertIn('visual_studio_integration_12.9', override)
-        self.assertIn('cublas_dev_12.9', override)
-        self.assertNotIn('Display.Driver', override)
-        self.assertIn('-n', override.split())
-        self.assertIn('-y', override.split())
-        self.assertIn('-gm2', override.split())
+        self.assertEqual(calls[1], ['CUDA', '12.9'])
+        self.assertNotIn('Display.Driver', str(calls))
 
     def test_cmake_never_installs_into_global_python(self):
         scan, gpu = self.windows(); scan.tools['cmake'] = None
@@ -109,7 +103,34 @@ class GPUSetupTests(unittest.TestCase):
                         exe.parent.mkdir(parents=True); exe.touch()
                 with patch.object(gs, 'missing_tools', return_value=[]), self.assertRaises(gs.SetupError):
                     gs.build_gpu(root, scan, gpu, lambda _: None, runner=runner)
+                self.assertEqual(len(calls), failure_step + 1)
                 self.assertEqual(manifest.read_text(), 'previous runtime')
+
+    def test_windows_build_promotes_executable_from_short_temporary_path(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder) / ('long-project-' * 4)
+            (root / 'whisper.cpp/ggml').mkdir(parents=True)
+            (root / 'whisper.cpp/CMakeLists.txt').touch(); (root / 'whisper.cpp/ggml/CMakeLists.txt').touch()
+            scan, gpu = self.windows(); calls = []
+            def runner(args, *a, **kw):
+                calls.append(args)
+                if '-B' in args:
+                    build = Path(args[args.index('-B') + 1])
+                    self.assertNotIn(str(root), str(build))
+                    exe = build / 'bin/Release/whisper-cli.exe'
+                    exe.parent.mkdir(parents=True); exe.write_bytes(b'compiled executable')
+                    (build / 'CMakeConfigureLog.yaml').write_text('diagnostics')
+                elif '--help' in args:
+                    self.assertTrue(Path(args[0]).is_relative_to(root.resolve()))
+            with patch.object(gs, 'missing_tools', return_value=[]):
+                result = gs.build_gpu(root, scan, gpu, lambda _: None, runner=runner)
+            exe = root / result['executable']
+            self.assertEqual(exe.read_bytes(), b'compiled executable')
+            self.assertEqual((exe.parent / 'configure-0.yaml').read_text(), 'diagnostics')
+            working = Path(calls[0][calls[0].index('-B') + 1])
+            self.assertFalse(working.exists())
+            with patch.object(gs, 'host_key', return_value=('Windows', 'amd64')):
+                self.assertEqual(gs.load_runtime(root)['path'], str(exe.resolve()))
 
     def test_install_rescan_rejects_changed_device(self):
         with tempfile.TemporaryDirectory() as folder:

@@ -140,7 +140,7 @@ class GPUSetupDialog(CustomDialog):
             plan += ('需要安裝：' + '、'.join(self.missing)) if self.missing else '所需工具已就緒。'
             plan += '\n輸出：whisper.cpp/build/tjksub/ 內的獨立 GPU 編譯目錄。'
             if self.missing:
-                plan += '\n來源：CMake／PyPI；Windows 使用 Microsoft winget 原廠安裝包，Mac 使用 Apple 或 Homebrew。'
+                plan += '\n來源：CMake／PyPI；CUDA 使用 NVIDIA 官方元件並驗證 SHA256；其他 Windows 工具使用 winget，Mac 使用 Apple 或 Homebrew。'
             self.planLabel.setText(plan)
         except SetupError as exc:
             self.planLabel.setText(str(exc))
