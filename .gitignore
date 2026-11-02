@@ -13,6 +13,7 @@ venv.backup-*/
 
 # Keep local credentials and caches out of releases
 .venv/
+.build-venv/
 .env
 .env.*
 !.env.example
@@ -20,3 +21,10 @@ venv.backup-*/
 *.key
 *.p12
 *.pfx
+
+# Reproducible packaging output (never commit local binary artifacts)
+/build/
+/dist/
+/release-artifacts/
+packaging/generated/
+*.spec.bak

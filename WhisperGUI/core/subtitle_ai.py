@@ -4,6 +4,7 @@ import re
 import socket
 import urllib.error
 import urllib.request
+from .network import ssl_context
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 from urllib.parse import quote, urlsplit, urlunsplit
@@ -153,10 +154,11 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
 
 
 class ChatClient:
-    def __init__(self, config, opener=None):
+    def __init__(self, config, opener=None, *, system_prompt=SYSTEM_PROMPT):
         self.config = config
+        self.system_prompt = system_prompt
         self.endpoint = config.validate()
-        self.opener = opener or urllib.request.build_opener(NoRedirect())
+        self.opener = opener or urllib.request.build_opener(NoRedirect(), urllib.request.HTTPSHandler(context=ssl_context()))
 
     def complete(self, entries, prompt):
         # No audio, local paths, previous conversation, or previous run's prompt.
@@ -164,12 +166,12 @@ class ChatClient:
         protocol = self.config.protocol
         headers = {'Content-Type': 'application/json', 'Accept': 'application/json'}
         if protocol == 'gemini':
-            payload = {'systemInstruction': {'parts': [{'text': SYSTEM_PROMPT}]},
+            payload = {'systemInstruction': {'parts': [{'text': self.system_prompt}]},
                        'contents': [{'role': 'user', 'parts': [{'text': content}]}],
                        'generationConfig': {'responseMimeType': 'application/json'}}
             auth_header, auth_prefix = 'x-goog-api-key', ''
         elif protocol == 'anthropic':
-            payload = {'model': self.config.model.strip(), 'system': SYSTEM_PROMPT,
+            payload = {'model': self.config.model.strip(), 'system': self.system_prompt,
                        'max_tokens': 8192, 'messages': [{'role': 'user', 'content': content}], 'stream': False}
             headers['anthropic-version'] = '2023-06-01'
             if self.config.workspace_id:
@@ -177,7 +179,7 @@ class ChatClient:
             auth_header, auth_prefix = 'x-api-key', ''
         else:
             payload = {'model': self.config.model.strip(), 'messages': [
-                {'role': 'system', 'content': SYSTEM_PROMPT},
+                {'role': 'system', 'content': self.system_prompt},
                 {'role': 'user', 'content': content}], 'stream': False}
             auth_header, auth_prefix = 'Authorization', 'Bearer '
         if self.config.api_key:

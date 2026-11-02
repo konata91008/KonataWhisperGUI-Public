@@ -16,13 +16,13 @@ fail() {
     echo ""
     echo "[錯誤] $1"
     echo "按 Enter 關閉視窗..."
-    read -r
+    if [ -t 0 ] && [ -z "$CI" ]; then read -r; fi
     exit 1
 }
 
 # 1. 確認系統有 python3（macOS 沒有 `python` 指令）
 TJK_PYTHON=""
-for candidate in python3.12 python3.11 python3.10 python3; do
+for candidate in /opt/homebrew/bin/python3.12 /usr/local/bin/python3.12 python3.12 python3.11 python3.10 python3; do
     if "$candidate" -c 'import sys; assert (3,10) <= sys.version_info[:2] <= (3,12)' >/dev/null 2>&1; then
         TJK_PYTHON="$candidate"
         break
@@ -38,13 +38,13 @@ if ! "$DIR/venv/bin/python" -c "import sys; assert (3,10) <= sys.version_info[:2
         mv "$DIR/venv" "$DIR/venv.backup-$(date +%Y%m%d%H%M%S)-$$" || fail "無法備份舊 venv"
     fi
     "$TJK_PYTHON" -m venv "$DIR/venv" || fail "建立虛擬環境失敗"
-    "$DIR/venv/bin/pip" install -r "$DIR/requirements.txt" || fail "安裝套件失敗，請檢查網路連線"
+    "$DIR/venv/bin/python" -m pip install -r "$DIR/requirements.txt" || fail "安裝套件失敗，請檢查網路連線"
 fi
 
 # 3. venv 存在但套件不齊時，自動補裝
-if ! "$DIR/venv/bin/python" -c "import PyQt5, opencc" >/dev/null 2>&1; then
-    echo "偵測到缺少 PyQt5，正在安裝套件..."
-    "$DIR/venv/bin/pip" install -r "$DIR/requirements.txt" || fail "安裝套件失敗，請檢查網路連線"
+if ! "$DIR/venv/bin/python" -c "from PyQt5 import QtWidgets, QtSvg; import certifi; from opencc import OpenCC; assert OpenCC('t2s').convert('繁體') == '繁体'" >/dev/null 2>&1; then
+    echo "正在補齊圖形介面、繁簡轉換與 HTTPS 所需套件..."
+    "$DIR/venv/bin/python" -m pip install -r "$DIR/requirements.txt" || fail "安裝套件失敗，請檢查網路連線"
 fi
 
 # 4. 啟動（直接用 venv 的 python，不依賴 activate）

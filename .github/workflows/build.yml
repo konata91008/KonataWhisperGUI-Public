@@ -1,0 +1,153 @@
+name: Desktop packages
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: desktop-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-2022
+            platform: windows-x64
+          - os: macos-15
+            platform: macos-arm64
+          - os: macos-15-intel
+            platform: macos-x86_64
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    env:
+      PYTHONUTF8: '1'
+      PYTHONDONTWRITEBYTECODE: '1'
+      QT_QPA_PLATFORM: offscreen
+      PYINSTALLER_CONFIG_DIR: ${{ github.workspace }}/build/pyinstaller-cache
+      MACOSX_DEPLOYMENT_TARGET: '12.0'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            packaging/requirements-build.txt
+      - name: Install isolated build dependencies
+        run: python -m pip install -r packaging/requirements-build.txt
+      - name: Unit and GUI regression tests
+        run: python -m unittest discover -s tests -v
+      - name: Source startup smoke test
+        run: python WhisperGUI/main.py --self-test build/source-smoke.json
+      - name: Test Windows source launcher
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: Start_Windows.bat --self-test build/launcher-smoke.json
+      - name: Test macOS source launcher
+        if: runner.os == 'macOS'
+        run: bash start_mac.command --self-test build/launcher-smoke.json
+      - name: Cache native engines and test model
+        id: native-cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            build/native
+            build/licenses/vulkan
+            build/downloads
+          key: native-${{ matrix.platform }}-${{ hashFiles('whisper.cpp/**', 'packaging/build_native.py', 'packaging/build_ffmpeg.sh', 'packaging/sources.json', 'packaging/install_vulkan.ps1') }}
+      - name: Prepare verified FFmpeg sources
+        run: python packaging/prepare_ffmpeg.py
+      - name: Install Vulkan SDK for Windows build
+        if: runner.os == 'Windows' && steps.native-cache.outputs.cache-hit != 'true'
+        shell: pwsh
+        run: ./packaging/install_vulkan.ps1
+      - name: Prepare Windows FFmpeg toolchain
+        if: runner.os == 'Windows' && steps.native-cache.outputs.cache-hit != 'true'
+        uses: msys2/setup-msys2@ec48f7c5447b3140e2b088413ae3a55687bccb6e # v2.33.0
+        with:
+          msystem: MINGW64
+          update: true
+          install: make mingw-w64-x86_64-gcc diffutils
+      - name: Build static FFmpeg on Windows
+        if: runner.os == 'Windows' && steps.native-cache.outputs.cache-hit != 'true'
+        shell: msys2 {0}
+        run: bash packaging/build_ffmpeg.sh
+      - name: Build Vulkan engine on Windows
+        if: runner.os == 'Windows' && steps.native-cache.outputs.cache-hit != 'true'
+        run: python packaging/build_native.py --ffmpeg-ready
+      - name: Build Metal engine and static FFmpeg on macOS
+        if: runner.os == 'macOS' && steps.native-cache.outputs.cache-hit != 'true'
+        run: python packaging/build_native.py
+      - name: Bundle Python, Qt, engine, codecs and resources
+        run: |
+          python packaging/prepare_assets.py
+          python -m PyInstaller --noconfirm --clean packaging/TJKSub.spec
+      - name: Frozen app smoke test (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $app = Start-Process -FilePath 'dist/TJKSub/TJKSub.exe' -ArgumentList @('--self-test', "$PWD/build/frozen-smoke.json") -Wait -PassThru
+          if ($app.ExitCode -ne 0) { throw 'Frozen app smoke test failed' }
+          $report = Get-Content build/frozen-smoke.json -Raw | ConvertFrom-Json
+          if (!$report.ok -or !$report.packaged) { throw 'Invalid smoke-test report' }
+          python packaging/smoke_transcription.py --native dist/TJKSub/_internal/native
+      - name: Frozen app and transcription smoke tests (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          dist/TJKSub.app/Contents/MacOS/TJKSub --self-test "$PWD/build/frozen-smoke.json"
+          python packaging/smoke_transcription.py --native dist/TJKSub.app/Contents/Frameworks/native
+      - name: Install Windows installer compiler
+        if: runner.os == 'Windows'
+        run: choco install innosetup --yes --no-progress
+      - name: Create installers and checksums
+        run: python packaging/make_release.py
+      - name: Test installation and read-only/relocated startup
+        run: python packaging/verify_install.py
+      - name: Attach packages
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: TJKSub-${{ matrix.platform }}
+          path: release-artifacts/*
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 0
+      - name: Attach verification reports
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: verification-${{ matrix.platform }}
+          path: |
+            build/*smoke.json
+            build/*smoke.png
+            build/*transcription.json
+            build/*transcription.log
+          if-no-files-found: warn
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: TJKSub-*
+          path: release-artifacts
+          merge-multiple: true
+      - name: Verify tag and publish release after all platforms pass
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          python -c 'import json,os; assert "v"+json.load(open("WhisperGUI/version.json"))["version"] == os.environ["RELEASE_TAG"]'
+          gh release create "$RELEASE_TAG" release-artifacts/* --verify-tag --title "TJKSub $RELEASE_TAG" --notes-file packaging/RELEASE_NOTES.md

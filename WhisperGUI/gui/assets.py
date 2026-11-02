@@ -2,18 +2,22 @@
 # 主按鈕與選取項目使用深色文字，維持淺色填色上的可讀性。
 THEME_COLORS = {
     "light": {
-        "BG_PRIMARY": "#f4f0eb", "BG_SECONDARY": "#eae4dd", "BG_TERTIARY": "#efe9e2",
-        "TEXT_PRIMARY": "#514840", "TEXT_SECONDARY": "#70665d", "TEXT_TERTIARY": "#7a6f65",
-        "BORDER_PRIMARY": "#e1d8ce", "BORDER_SECONDARY": "#cdc1b5", "TEXT_DISABLED": "#a29588",
-        "ACCENT": "#b5a394", "ACCENT_HOVER": "#c2b2a3", "ACCENT_PRESSED": "#a18f7e",
-        "ON_ACCENT": "#332c26", "SUCCESS": "#7f927f", "DANGER": "#ba9891",
+        "BG_PRIMARY": "#f5f1eb", "BG_SECONDARY": "#ede6dc", "BG_TERTIARY": "#f8f5ef",
+        "SURFACE": "#fffdf9", "SURFACE_ALT": "#f2ede5",
+        "TEXT_PRIMARY": "#302b27", "TEXT_SECONDARY": "#625950", "TEXT_TERTIARY": "#756b61",
+        "BORDER_PRIMARY": "#e6ded4", "BORDER_SECONDARY": "#d8cbbd", "TEXT_DISABLED": "#a99e93",
+        "ACCENT": "#805e46", "ACCENT_HOVER": "#6d4e38", "ACCENT_PRESSED": "#583e2d",
+        "ON_ACCENT": "#fffaf4", "SUCCESS": "#52705e", "DANGER": "#aa4f48",
+        "SAGE_BG": "#e7eee6", "SAGE_TEXT": "#496250", "DISABLED_BG": "#e9e3db",
     },
     "dark": {
-        "BG_PRIMARY": "#363330", "BG_SECONDARY": "#2d2b28", "BG_TERTIARY": "#403c37",
-        "TEXT_PRIMARY": "#e8e1da", "TEXT_SECONDARY": "#c7bcb0", "TEXT_TERTIARY": "#aea396",
-        "BORDER_PRIMARY": "#514b45", "BORDER_SECONDARY": "#655c53", "TEXT_DISABLED": "#8f8377",
-        "ACCENT": "#b8a99b", "ACCENT_HOVER": "#c5b8aa", "ACCENT_PRESSED": "#a49383",
-        "ON_ACCENT": "#332c26", "SUCCESS": "#a2b19b", "DANGER": "#ba9891",
+        "BG_PRIMARY": "#242321", "BG_SECONDARY": "#35322e", "BG_TERTIARY": "#2b2926",
+        "SURFACE": "#302d29", "SURFACE_ALT": "#37332e",
+        "TEXT_PRIMARY": "#f2eae1", "TEXT_SECONDARY": "#c8bdb0", "TEXT_TERTIARY": "#ab9e90",
+        "BORDER_PRIMARY": "#464039", "BORDER_SECONDARY": "#5b5146", "TEXT_DISABLED": "#897c6e",
+        "ACCENT": "#d7b18e", "ACCENT_HOVER": "#e2c2a4", "ACCENT_PRESSED": "#be9877",
+        "ON_ACCENT": "#2e241c", "SUCCESS": "#a6c3ad", "DANGER": "#d38f85",
+        "SAGE_BG": "#303e34", "SAGE_TEXT": "#b4cbb7", "DISABLED_BG": "#3a3732",
     },
 }
 
@@ -37,9 +41,9 @@ QLabel {
 }
 #TitleLabel {
     color: {TEXT_PRIMARY};
-    font-size: 30px;
-    font-weight: 800;
-    letter-spacing: 1px;
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
 }
 #SubtitleLabel {
     color: {TEXT_TERTIARY};
@@ -57,9 +61,9 @@ QPushButton {
     background-color: {BG_PRIMARY};
     color: {TEXT_SECONDARY};
     border: 1px solid {BORDER_SECONDARY};
-    border-radius: 12px;
-    padding: 9px 18px;
-    font-size: 14px;
+    border-radius: 10px;
+    padding: 9px 14px;
+    font-size: 13px;
     font-weight: 500;
 }
 QPushButton:hover {
@@ -70,8 +74,8 @@ QPushButton:hover {
     background-color: {ACCENT};
     color: {ON_ACCENT};
     border: none;
-    border-radius: 14px;
-    padding: 12px 18px;
+    border-radius: 11px;
+    padding: 12px 22px;
     font-size: 15px;
     font-weight: 600;
 }
@@ -154,14 +158,15 @@ QPushButton:hover {
 
 /* --- Inputs & Combos --- */
 QLineEdit, QComboBox {
-    background-color: {BG_PRIMARY};
+    font-size: 13px;
+    background-color: {SURFACE};
     color: {TEXT_PRIMARY};
     border: 1px solid {BORDER_SECONDARY};
     border-radius: 10px;
     padding: 9px 12px;
 }
 QLineEdit:focus, QComboBox:focus {
-    border: 2px solid {ACCENT};
+    border: 1px solid {ACCENT};
 }
 QComboBox::drop-down {
     border: none;
@@ -205,6 +210,7 @@ QComboBox QAbstractItemView::item:disabled {
 
 /* --- Checkbox：圓潤可愛的勾選框 --- */
 QCheckBox {
+    font-size: 13px;
     color: {TEXT_SECONDARY};
     spacing: 8px;
 }
@@ -219,6 +225,7 @@ QCheckBox::indicator:hover {
     border-color: {ACCENT};
 }
 QCheckBox::indicator:checked {
+    image: url({CHECKMARK_URL});
     background-color: {ACCENT};
     border-color: {ACCENT};
 }
@@ -363,10 +370,68 @@ QMenu::indicator {
     height: 16px;
     margin-left: 4px;
 }
+
+/* --- Desktop studio layout --- */
+#SubtitleLabel { font-size: 11px; color: {TEXT_TERTIARY}; }
+#BrandCaption { font-size: 12px; font-weight: 400; color: {TEXT_TERTIARY}; }
+#SectionTitle { font-size: 16px; font-weight: 600; color: {TEXT_PRIMARY}; }
+#PageHeading { font-size: 22px; font-weight: 600; color: {TEXT_PRIMARY}; }
+#SubtleLabel { font-size: 12px; font-weight: 400; color: {TEXT_TERTIARY}; }
+#OfflineBadge {
+    background: {SAGE_BG}; color: {SAGE_TEXT};
+    border-radius: 9px; padding: 6px 10px; font-size: 11px; font-weight: 500;
+}
+#OfflineBadge[remote="true"] { background: {BG_SECONDARY}; color: {ACCENT}; }
+QFrame#PanelCard, QFrame#EditorCard {
+    background: {SURFACE}; border: 1px solid {BORDER_PRIMARY}; border-radius: 16px;
+}
+QFrame#ToolbarCard {
+    background: {SURFACE_ALT}; border: 1px solid {BORDER_PRIMARY}; border-radius: 12px;
+}
+#MainTabs::pane { border: none; background: transparent; top: 0px; }
+#MainTabBar::tab {
+    border: 1px solid transparent; border-radius: 10px;
+    padding: 10px 22px; margin-right: 8px; margin-bottom: 12px;
+    background: transparent; color: {TEXT_SECONDARY}; font-size: 14px;
+}
+#MainTabBar::tab:selected { background: {ACCENT}; color: {ON_ACCENT}; font-weight: 600; }
+#MainTabBar::tab:hover:!selected { background: {BG_SECONDARY}; }
+#MainTabBar::tab:focus { border-color: {BORDER_SECONDARY}; }
+#ToolbarButton, #SettingsButton, #CloseButton {
+    padding: 0px; border: none; border-radius: 9px; background: transparent;
+}
+#ToolbarButton:hover, #SettingsButton:hover { background: {BG_SECONDARY}; }
+#CloseButton:hover { background: {BG_SECONDARY}; border: 1px solid {DANGER}; }
+#LangButton { padding: 5px 10px; background: {SURFACE}; border: 1px solid {BORDER_PRIMARY}; }
+#FileList { background: {BG_TERTIARY}; border: 1px dashed {BORDER_SECONDARY}; padding: 8px; }
+#FileList::item { padding: 12px 10px; margin-bottom: 4px; }
+#FileList:focus { border-color: {ACCENT}; }
+#FileCountLabel { background: {SURFACE_ALT}; color: {TEXT_SECONDARY}; padding: 5px 9px; }
+#ConversionSource, #ConversionResult {
+    border: none; background: {SURFACE}; color: {TEXT_PRIMARY}; padding: 4px;
+    font-size: 14px; selection-background-color: {ACCENT}; selection-color: {ON_ACCENT};
+}
+#ConversionSource:focus { background: {SURFACE}; }
+#DiagnosticEditors::pane { border: none; background: {SURFACE}; }
+#DiagnosticEditors QTabBar::tab { padding: 8px 10px; margin: 0px 4px 8px 0px; border-radius: 8px; background: {SURFACE}; color: {TEXT_SECONDARY}; }
+#DiagnosticEditors QTabBar::tab:selected { background: {BG_SECONDARY}; color: {TEXT_PRIMARY}; }
+#DiagnosticTable { font-size: 13px; background: {SURFACE}; color: {TEXT_PRIMARY}; border: none; selection-background-color: {BG_SECONDARY}; selection-color: {TEXT_PRIMARY}; }
+#DiagnosticTable QHeaderView::section { background: {SURFACE_ALT}; color: {TEXT_SECONDARY}; border: none; padding: 6px; font-size: 12px; }
+#DiagnosticTable::item { padding: 5px; }
+QSplitter::handle { background: transparent; width: 12px; }
+#ConversionStatus { font-size: 12px; font-weight: 400; color: {TEXT_TERTIARY}; }
+#ConversionStatus[state="success"] { color: {SUCCESS}; }
+#ConversionStatus[state="error"] { color: {DANGER}; }
+QPushButton:disabled { color: {TEXT_DISABLED}; background: {DISABLED_BG}; border-color: {BORDER_PRIMARY}; }
+#MainWindow #PrimaryButton:disabled { color: {TEXT_DISABLED}; background: {DISABLED_BG}; }
+QPushButton:focus { border: 1px solid {ACCENT}; }
+#PrimaryButton:focus { border: 1px solid {TEXT_PRIMARY}; }
+QPlainTextEdit:focus { border-color: {ACCENT}; }
 """
 
 # --- SVG 圖示資源 ---
 SVG_ICONS = {
+    "selection_check.svg": '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="{ON_ACCENT}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4 4 10-10"/></svg>',
     "settings.svg": """<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="{ICON_COLOR}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m9 3 1-1h4l1 1 .5 2 2 1 2-.5 1.5 2.5-.5 2-1.5 1v2l1.5 1 .5 2-1.5 2.5-2-.5-2 1-.5 2-1 1h-4l-1-1-.5-2-2-1-2 .5L3 16l.5-2L5 13v-2l-1.5-1L3 8l1.5-2.5 2 .5 2-1z"/><circle cx="12" cy="12" r="3"/></svg>""",
     "sun.svg": """<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#70665d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>""",
     "moon.svg": """<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#c7bcb0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>""",

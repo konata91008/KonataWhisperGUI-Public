@@ -1,7 +1,7 @@
 """AI tools use Traditional Chinese or English (English fallback for other locales)."""
 STRINGS = {
     'zh_TW': {
-        'settings': 'API 設定…', 'settings_title': 'AI 字幕 API 設定',
+        'settings': 'API 設定…', 'settings_title': 'AI API 設定',
         'protocol': 'API 格式', 'url_label': 'API 基底網址',
         'protocol_hint': '依服務選擇 API 格式，網址與模型可自訂。各格式分別記住設定。',
         'protocol_error': '請選擇支援的 API 格式。',
@@ -34,7 +34,7 @@ STRINGS = {
         'formats': '請至少選擇一種匯出格式。', 'unexpected': '優化未完成，請稍後重試。',
     },
     'en': {
-        'settings': 'API settings…', 'settings_title': 'Subtitle AI API settings',
+        'settings': 'API settings…', 'settings_title': 'AI API settings',
         'protocol': 'API format', 'url_label': 'API base URL',
         'protocol_hint': 'Choose the API format your service supports. Each format remembers its own custom URL and model.',
         'protocol_error': 'Choose a supported API format.',

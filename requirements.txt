@@ -1,6 +1,6 @@
 # ============================================================
 # WhisperGUI (TJKSub) — Python 套件需求
-# 建議 Python 版本：3.10 ~ 3.12（開發/測試環境：3.12，見 venv/pyvenv.cfg）
+# 建議 Python 版本：3.10 ~ 3.12（封裝環境：3.12）
 # 安裝方式：pip install -r requirements.txt
 #
 # [版本相容性說明]
@@ -18,16 +18,18 @@ PyQt5-sip>=12.13,<13
 PyQt5-Qt5>=5.15.2,<5.16
 
 # --- 繁簡中文轉換 ---
-# 註：已全文搜尋 main.py、core/、gui/，目前原始碼中沒有 import opencc 的紀錄，
-# 但現有專案 venv 已安裝此套件，故予以保留。
+# 用於「語言轉換」分頁：t2s（繁轉簡）／s2t（簡轉繁），完全離線執行。
 opencc-python-reimplemented==0.1.7
+
+# HTTPS trust store for packaged model downloads and API requests
+certifi>=2026.10.23
 
 # ============================================================
 # 以下為「非 pip 套件」，requirements.txt 無法安裝，需另行安裝／編譯：
 #
 # - ffmpeg（命令列工具）
 #   用途：core/tasks.py 的 transcription_task() 以 subprocess 呼叫 ffmpeg，
-#         將非 .wav/.mp3/.ogg/.flac 的音訊／影片轉成 16kHz 單軌 wav。
+#         將所有音訊／影片轉成 16kHz 單軌 PCM wav。
 #   安裝：macOS -> brew install ffmpeg；Windows -> https://ffmpeg.org/download.html
 #
 # - whisper.cpp 執行檔（whisper-cli 或 main）

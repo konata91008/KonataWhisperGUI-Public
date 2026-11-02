@@ -4,8 +4,15 @@ import tempfile
 from pathlib import Path
 from PyQt5.QtWidgets import QApplication, QMessageBox
 from PyQt5.QtCore import QLockFile, QTimer
+# A packaged smoke test exercises the real executable while isolating all
+# settings/model writes in a temporary directory.
+if __name__ == '__main__' and '--self-test' in sys.argv:
+    from core.self_test import run
+    sys.exit(run(sys.argv[sys.argv.index('--self-test') + 1]))
+
 from gui.main_window import WhisperGUI
 from core.version import PROJECT_ROOT
+from core.paths import is_packaged, data_root
 from core.update_translations import update_strings
 
 #
@@ -18,7 +25,8 @@ if __name__ == "__main__":
 
     # One running instance per installation. A restarted child waits for the old
     # process to release the lock before it opens files from the new version.
-    identity = hashlib.sha256(str(PROJECT_ROOT.resolve()).encode()).hexdigest()[:24]
+    identity_root = data_root() if is_packaged() else PROJECT_ROOT
+    identity = hashlib.sha256(str(identity_root.resolve()).encode()).hexdigest()[:24]
     instance_lock = QLockFile(str(Path(tempfile.gettempdir()) / f'tjksub-{identity}.lock'))
     instance_lock.setStaleLockTime(0)
     if not instance_lock.tryLock(5000 if '--restarted' in sys.argv else 0):
@@ -32,7 +40,7 @@ if __name__ == "__main__":
     gui.show()
     if '--check-updates' in sys.argv:
         QTimer.singleShot(0, gui.open_update_dialog)
-    elif '--setup' in sys.argv or not gui.gpu_runtime:
+    elif '--setup' in sys.argv:
         QTimer.singleShot(0, gui.open_gpu_setup)
     
     # 進入應用程式的主事件循環

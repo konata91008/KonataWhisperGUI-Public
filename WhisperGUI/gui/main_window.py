@@ -7,10 +7,10 @@ from PyQt5.QtWidgets import (
     QWidget, QPushButton, QFileDialog, QGridLayout, QLabel, QListWidget, QListWidgetItem,
     QComboBox, QLineEdit, QCheckBox, QHBoxLayout, QVBoxLayout, QDialog,
     QDialogButtonBox, QSizeGrip, QMenu, QAction, QGraphicsDropShadowEffect,
-    QSizePolicy, QApplication
+    QSizePolicy, QApplication, QTabWidget, QScrollArea, QFrame
 )
-from PyQt5.QtCore import Qt, QSize, QSettings, QEvent, QProcess
-from PyQt5.QtGui import QIcon, QStandardItemModel, QStandardItem, QColor
+from PyQt5.QtCore import Qt, QSize, QSettings, QEvent, QProcess, QUrl
+from PyQt5.QtGui import QIcon, QStandardItemModel, QStandardItem, QColor, QPalette, QDesktopServices
 
 # 從專案的其他模組中匯入
 from .assets import STYLESHEET, SVG_ICONS, THEME_COLORS
@@ -20,8 +20,15 @@ from .widgets import (
 from core.tasks import WorkerThread, download_task, transcription_task
 from core.translations import TRANSLATIONS
 from core.version import PROJECT_ROOT, VERSION_TEXT
+from core.paths import is_packaged, data_root, bundled_runtime, restart_command
+from core.distribution_translations import distribution_strings
 from core.update_translations import update_strings
 from .update_dialog import UpdateDialog
+from .conversion_tab import ConversionTab
+from .diagnostics_tab import DiagnosticsTab
+from .studio_widgets import BrandMark, MediaFileList
+from core.interface_translations import interface_strings
+from core.conversion_translations import conversion_strings
 from core.subtitle_ai import APIConfig, load_api_profiles, save_api_profiles
 from core.ai_translations import ai_strings
 from core.gpu_setup import load_runtime
@@ -32,7 +39,8 @@ class WhisperGUI(QWidget):
         super().__init__()
         self.setObjectName("MainWindow")
         self.setWindowTitle("TJKSub")
-        self.setGeometry(100, 100, 940, 760)
+        self.setWindowIcon(QIcon(str(PROJECT_ROOT / "WhisperGUI/gui/resources/autumn-logo.svg")))
+        self.setGeometry(100, 100, 1040, 800)
         self.setMinimumWidth(860)
 
         self.setWindowFlags(Qt.FramelessWindowHint)
@@ -102,26 +110,22 @@ class WhisperGUI(QWidget):
         self.update_theme()
 
     def create_svg_files(self):
-        new_icons = ["minimize.svg", "maximize.svg", "restore.svg", "close.svg", "globe.svg"]
+        themed = {"minimize.svg", "maximize.svg", "restore.svg", "close.svg", "globe.svg"}
         for name, content in SVG_ICONS.items():
-            path = os.path.join(self.temp_dir, name)
-            if "{SUCCESS_COLOR}" in content:
-                with open(os.path.join(self.temp_dir, f"check_light.svg"), 'w') as f_light:
-                    f_light.write(content.replace("{SUCCESS_COLOR}", THEME_COLORS["light"]["SUCCESS"]))
-                with open(os.path.join(self.temp_dir, f"check_dark.svg"), 'w') as f_dark:
-                    f_dark.write(content.replace("{SUCCESS_COLOR}", THEME_COLORS["dark"]["SUCCESS"]))
-            elif "{ICON_COLOR}" in content or name in new_icons:
-                base_name = name.replace('.svg', '')
-                with open(os.path.join(self.temp_dir, f"{base_name}_light.svg"), 'w') as f_light:
-                    f_light.write(content.replace("{ICON_COLOR}", THEME_COLORS["light"]["TEXT_SECONDARY"]))
-                with open(os.path.join(self.temp_dir, f"{base_name}_dark.svg"), 'w') as f_dark:
-                    f_dark.write(content.replace("{ICON_COLOR}", THEME_COLORS["dark"]["TEXT_SECONDARY"]))
-            else: 
-                with open(path, 'w') as f:
-                    f.write(content)
+            if name in themed or any(token in content for token in ('{ICON_COLOR}', '{SUCCESS_COLOR}', '{ON_ACCENT}')):
+                for theme, colors in THEME_COLORS.items():
+                    rendered = (content.replace('{ICON_COLOR}', colors['TEXT_SECONDARY'])
+                                .replace('{SUCCESS_COLOR}', colors['SUCCESS'])
+                                .replace('{ON_ACCENT}', colors['ON_ACCENT']))
+                    path = os.path.join(self.temp_dir, name.replace('.svg', f'_{theme}.svg'))
+                    with open(path, 'w', encoding='utf-8') as stream:
+                        stream.write(rendered)
+            else:
+                with open(os.path.join(self.temp_dir, name), 'w', encoding='utf-8') as stream:
+                    stream.write(content)
 
     def get_icon_path(self, name):
-        if name in ["info.svg", "question.svg", "error.svg", "check.svg", "minimize.svg", "maximize.svg", "restore.svg", "close.svg", "globe.svg", "settings.svg"]:
+        if name in ["info.svg", "question.svg", "error.svg", "check.svg", "minimize.svg", "maximize.svg", "restore.svg", "close.svg", "globe.svg", "settings.svg", "selection_check.svg"]:
             theme = "dark" if self.property("theme") == "dark" else "light"
             name = f"{name.replace('.svg', '')}_{theme}.svg"
         path = os.path.join(self.temp_dir, name)
@@ -130,11 +134,13 @@ class WhisperGUI(QWidget):
     def init_ui(self):
         self.titleLabel = QLabel("TJKSub", objectName="TitleLabel")
         self.subtitleLabel = QLabel(VERSION_TEXT, objectName="SubtitleLabel")
+        self.brandMark = BrandMark(self)
+        self.brandCaption = QLabel(objectName='BrandCaption')
         
         title_vbox = QVBoxLayout()
-        title_vbox.setSpacing(0)
+        title_vbox.setSpacing(3)
         title_vbox.addWidget(self.titleLabel)
-        title_vbox.addWidget(self.subtitleLabel)
+        title_vbox.addWidget(self.brandCaption)
 
         # --- 語言切換：精緻下拉選單 (按鈕顯示目前語言簡稱，選單打勾目前語言) ---
         self.langButton = QPushButton(objectName="LangButton")
@@ -157,7 +163,7 @@ class WhisperGUI(QWidget):
             self.lang_actions[code] = action
         self.langButton.setMenu(self.langMenu)
 
-        self.themeButton = QPushButton()
+        self.themeButton = QPushButton(objectName="ToolbarButton")
         self.themeButton.setFixedSize(32, 32)
         self.themeButton.setIconSize(QSize(20, 20))
         self.themeButton.clicked.connect(self.cycle_theme)
@@ -174,12 +180,12 @@ class WhisperGUI(QWidget):
         self.checkUpdateAction.triggered.connect(self.open_update_dialog)
         self.settingsButton.setMenu(self.settingsMenu)
         
-        self.minimizeButton = QPushButton()
+        self.minimizeButton = QPushButton(objectName="ToolbarButton")
         self.minimizeButton.setFixedSize(32, 32)
         self.minimizeButton.setIconSize(QSize(16, 16))
         self.minimizeButton.clicked.connect(self.showMinimized)
 
-        self.maximizeButton = QPushButton()
+        self.maximizeButton = QPushButton(objectName="ToolbarButton")
         self.maximizeButton.setFixedSize(32, 32)
         self.maximizeButton.setIconSize(QSize(16, 16))
         self.maximizeButton.clicked.connect(self.toggle_maximize_restore)
@@ -190,8 +196,13 @@ class WhisperGUI(QWidget):
         self.closeButton.clicked.connect(self.close)
 
         top_layout = QHBoxLayout()
+        top_layout.setSpacing(6)
+        top_layout.addWidget(self.brandMark)
+        top_layout.addSpacing(8)
         top_layout.addLayout(title_vbox)
         top_layout.addStretch()
+        top_layout.addWidget(self.subtitleLabel)
+        top_layout.addSpacing(12)
         top_layout.addWidget(self.langButton)
         top_layout.addSpacing(4)
         top_layout.addWidget(self.themeButton)
@@ -200,7 +211,7 @@ class WhisperGUI(QWidget):
         top_layout.addWidget(self.maximizeButton)
         top_layout.addWidget(self.closeButton)
 
-        self.fileList = QListWidget(objectName="FileList")
+        self.fileList = MediaFileList(self)
         self.fileList.setSelectionMode(QListWidget.ExtendedSelection)
         self.fileList.itemSelectionChanged.connect(self.update_file_count)
         self.fileList.installEventFilter(self)
@@ -210,13 +221,13 @@ class WhisperGUI(QWidget):
         self.fileCountLabel = QLabel(objectName="FileCountLabel")
         
         file_btn_layout = QHBoxLayout()
-        file_btn_layout.addWidget(self.btnAdd)
+        file_btn_layout.setSpacing(8)
+        file_btn_layout.addWidget(self.btnAdd, 1)
         file_btn_layout.addWidget(self.btnRemove)
-        file_btn_layout.addStretch()
 
         grid = QGridLayout()
-        grid.setHorizontalSpacing(16)
-        grid.setVerticalSpacing(10)
+        grid.setHorizontalSpacing(10)
+        grid.setVerticalSpacing(8)
         
         self.savePathLabel = QLabel()
         self.savePathEdit = QLineEdit()
@@ -230,20 +241,20 @@ class WhisperGUI(QWidget):
         self.modelCombo.activated[int].connect(self.on_model_selected)
         self.combo_delegate = CustomComboBoxDelegate(self)
         self.modelCombo.setItemDelegate(self.combo_delegate)
-        grid.addWidget(self.modelLabel, 2, 0, 1, 2)
-        grid.addWidget(self.modelCombo, 3, 0, 1, 2)
+        grid.addWidget(self.modelLabel, 2, 0)
+        grid.addWidget(self.modelCombo, 3, 0)
         
         self.langLabel = QLabel()
         self.langCombo = QComboBox()
         self.langCombo.setItemDelegate(self.combo_delegate)
-        grid.addWidget(self.langLabel, 4, 0, 1, 2)
-        grid.addWidget(self.langCombo, 5, 0, 1, 2)
+        grid.addWidget(self.langLabel, 2, 1)
+        grid.addWidget(self.langCombo, 3, 1)
 
         self.backendLabel = QLabel()
         self.backendCombo = QComboBox()
         self.backendCombo.setItemDelegate(self.combo_delegate)
-        grid.addWidget(self.backendLabel, 6, 0, 1, 2)
-        grid.addWidget(self.backendCombo, 7, 0, 1, 2)
+        grid.addWidget(self.backendLabel, 4, 0, 1, 2)
+        grid.addWidget(self.backendCombo, 5, 0, 1, 2)
 
         output_options_layout = QVBoxLayout()
         output_options_layout.setSpacing(8)
@@ -258,19 +269,19 @@ class WhisperGUI(QWidget):
         output_options_layout.addWidget(self.outputTxtCheck)
         output_options_layout.addStretch()
 
-        grid.addLayout(output_options_layout, 8, 0, 1, 2)
+        grid.addLayout(output_options_layout, 6, 0, 1, 2)
 
         self.promptLabel = QLabel()
-        grid.addWidget(self.promptLabel, 9, 0, 1, 2)
+        grid.addWidget(self.promptLabel, 7, 0, 1, 2)
 
         self.promptEdit = QLineEdit()
-        grid.addWidget(self.promptEdit, 10, 0, 1, 2)
+        grid.addWidget(self.promptEdit, 8, 0, 1, 2)
 
         # 本次使用範圍常駐顯示；Prompt 寫法保留在輸入框工具提示。
         self.promptHintLabel = QLabel(objectName="PromptHintLabel")
         self.promptHintLabel.setWordWrap(True)
         self.promptHintLabel.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
-        grid.addWidget(self.promptHintLabel, 11, 0, 1, 2)
+        grid.addWidget(self.promptHintLabel, 9, 0, 1, 2)
 
         self.btnStart = QPushButton(objectName="PrimaryButton")
 
@@ -285,34 +296,68 @@ class WhisperGUI(QWidget):
 
         # 左側檔案、右側設定。放大視窗時將多出的高度留給檔案清單。
         self.fileList.setMinimumHeight(260)
-        self.files_widget = QWidget()
+        self.files_widget = QFrame(objectName='PanelCard')
         files_vbox = QVBoxLayout(self.files_widget)
-        files_vbox.setContentsMargins(0, 0, 0, 0)
-        files_vbox.setSpacing(10)
-        files_vbox.addLayout(file_btn_layout)
-        files_vbox.addWidget(self.fileCountLabel, alignment=Qt.AlignLeft)
+        files_vbox.setContentsMargins(20, 20, 20, 20)
+        files_vbox.setSpacing(16)
+        files_header = QHBoxLayout()
+        self.filesTitle = QLabel(objectName='SectionTitle')
+        files_header.addWidget(self.filesTitle)
+        files_header.addStretch()
+        files_header.addWidget(self.fileCountLabel)
+        files_vbox.addLayout(files_header)
         files_vbox.addWidget(self.fileList, stretch=1)
+        files_vbox.addLayout(file_btn_layout)
 
-        self.settings_widget = QWidget()
-        self.settings_widget.setMinimumWidth(330)
-        self.settings_widget.setMaximumWidth(420)
+        self.settings_widget = QFrame(objectName='PanelCard')
+        self.settings_widget.setMinimumWidth(370)
         settings_vbox = QVBoxLayout(self.settings_widget)
-        settings_vbox.setContentsMargins(0, 0, 0, 0)
+        settings_vbox.setContentsMargins(20, 20, 20, 20)
+        settings_vbox.setSpacing(16)
+        self.settingsTitle = QLabel(objectName='SectionTitle')
+        settings_vbox.addWidget(self.settingsTitle)
         settings_vbox.addLayout(grid)
         settings_vbox.addStretch()
 
         body_layout = QHBoxLayout()
-        body_layout.setSpacing(24)
-        body_layout.addWidget(self.files_widget, stretch=1)
-        body_layout.addWidget(self.settings_widget, stretch=1)
+        body_layout.setSpacing(18)
+        body_layout.addWidget(self.files_widget, stretch=5)
+        settings_scroll = QScrollArea()
+        settings_scroll.setFrameShape(QScrollArea.NoFrame)
+        settings_scroll.setWidgetResizable(True)
+        settings_scroll.setMinimumWidth(370)
+        settings_scroll.setWidget(self.settings_widget)
+        settings_scroll.viewport().setAutoFillBackground(False)
+        self.settings_widget.setAutoFillBackground(False)
+        body_layout.addWidget(settings_scroll, stretch=6)
+
+        self.transcriptionPage = QWidget()
+        transcription_layout = QVBoxLayout(self.transcriptionPage)
+        transcription_layout.setContentsMargins(0, 4, 0, 0)
+        transcription_layout.addLayout(body_layout, stretch=1)
+        transcription_layout.addSpacing(12)
+        transcription_actions = QHBoxLayout()
+        self.transcriptionHint = QLabel(objectName='SubtleLabel')
+        self.transcriptionHint.setWordWrap(True)
+        transcription_actions.addWidget(self.transcriptionHint, 1)
+        transcription_actions.addSpacing(24)
+        self.btnStart.setMinimumWidth(210)
+        transcription_actions.addWidget(self.btnStart)
+        transcription_layout.addLayout(transcription_actions)
+        self.conversionTab = ConversionTab(self)
+        self.diagnosticsTab = DiagnosticsTab(self)
+        self.mainTabs = QTabWidget(objectName='MainTabs')
+        self.mainTabs.tabBar().setObjectName('MainTabBar')
+        self.mainTabs.tabBar().setDrawBase(False)
+        self.mainTabs.addTab(self.transcriptionPage, '')
+        self.mainTabs.addTab(self.conversionTab, '')
+        self.mainTabs.addTab(self.diagnosticsTab, '')
 
         content_inner_layout = QVBoxLayout()
-        content_inner_layout.setContentsMargins(28, 24, 28, 24)
+        content_inner_layout.setContentsMargins(26, 24, 26, 24)
         content_inner_layout.addLayout(top_layout)
-        content_inner_layout.addSpacing(24)
-        content_inner_layout.addLayout(body_layout, stretch=1)
         content_inner_layout.addSpacing(16)
-        content_inner_layout.addWidget(self.btnStart)
+        content_inner_layout.addWidget(self.mainTabs, stretch=1)
         
         # 內容面板使用霧面實色，避免與主按鈕的圖形效果互相干擾。
         self.content_widget = QWidget()
@@ -321,7 +366,7 @@ class WhisperGUI(QWidget):
 
         # 外側邊距保留給視窗圓角與右下方縮放把手。
         main_layout = QGridLayout()
-        main_layout.setContentsMargins(25, 25, 25, 25)
+        main_layout.setContentsMargins(12, 12, 12, 12)
         main_layout.addWidget(self.content_widget, 0, 0)
         main_layout.addWidget(QSizeGrip(self), 0, 0, Qt.AlignBottom | Qt.AlignRight)
         self.setLayout(main_layout)
@@ -398,8 +443,24 @@ class WhisperGUI(QWidget):
 
     def retranslate_ui(self):
         trans = self.translations
-        
+        appearance = interface_strings(self.current_lang)
+        self.brandCaption.setText(appearance['tagline'])
+        self.filesTitle.setText(appearance['files_title'])
+        self.settingsTitle.setText(appearance['settings_title'])
+        self.transcriptionHint.setText(appearance['transcription_hint'])
+        self.gpuSetupAction.setText(appearance['gpu_settings'])
+        self.fileList.set_empty_text(appearance['files_empty'], appearance['files_hint'])
+        for button, key in ((self.themeButton, 'theme'), (self.minimizeButton, 'minimize'),
+                            (self.maximizeButton, 'maximize'), (self.closeButton, 'close')):
+            button.setToolTip(appearance[key])
+            button.setAccessibleName(appearance[key])
         self.subtitleLabel.setText(VERSION_TEXT)
+        conversion = conversion_strings(self.current_lang)
+        self.mainTabs.setTabText(0, conversion['transcription_tab'])
+        self.mainTabs.setTabText(1, conversion['conversion_tab'])
+        self.conversionTab.retranslate_ui(self.current_lang)
+        self.diagnosticsTab.retranslate_ui(self.current_lang)
+        self.mainTabs.setTabText(2, self.diagnosticsTab.t['tab'])
         updates = update_strings(self.current_lang)
         self.settingsButton.setToolTip(updates['settings'])
         self.settingsButton.setAccessibleName(updates['settings'])
@@ -446,8 +507,8 @@ class WhisperGUI(QWidget):
         return dialog.exec_()
 
     def find_executable(self):
-        self.base_dir = str(PROJECT_ROOT / 'whisper.cpp')
-        self.gpu_runtime = load_runtime(PROJECT_ROOT)
+        self.base_dir = str(data_root())
+        self.gpu_runtime = bundled_runtime() if is_packaged() else load_runtime(PROJECT_ROOT)
         self.exe_path = self.gpu_runtime['path'] if self.gpu_runtime else None
 
     def load_model_list(self):
@@ -533,10 +594,16 @@ class WhisperGUI(QWidget):
         if runtime:
             self.backendCombo.addItem(runtime['backend'].upper() + ' · ' + runtime['gpu']['name'], runtime['backend'])
         else:
-            self.backendCombo.addItem('尚未設定顯卡 · 請開啟齒輪設定', None)
-        self.backendCombo.setToolTip('依已完成編譯的顯卡啟用；不會自動切換 CPU。')
+            self.backendCombo.addItem(interface_strings(self.current_lang)['backend_unset'], None)
+        self.backendCombo.setToolTip(interface_strings(self.current_lang)['backend_hint'])
 
     def open_gpu_setup(self):
+        if is_packaged():
+            texts = distribution_strings(self.current_lang)
+            message = (texts['setup'].format(backend=self.gpu_runtime['backend'].upper(), models=str(data_root() / 'models'))
+                       if self.gpu_runtime else texts['broken'])
+            self.show_message('info', texts['setup_title'], message)
+            return
         if self.is_downloading or (self.worker and self.worker.isRunning()):
             self.show_message('info', '顯卡設定', '請先等待目前的轉錄／下載完成。')
             return
@@ -570,6 +637,12 @@ class WhisperGUI(QWidget):
         self.current_colors = THEME_COLORS[theme].copy()
         arrow_icon_path = self.get_icon_path(f"down_arrow_{theme}.svg")
         self.current_colors["DOWN_ARROW_URL"] = arrow_icon_path
+        self.current_colors['CHECKMARK_URL'] = self.get_icon_path('selection_check.svg')
+        self.brandMark.setThemeColors(self.current_colors)
+        self.fileList.setThemeColors(self.current_colors)
+        palette = self.palette()
+        palette.setColor(QPalette.PlaceholderText, QColor(self.current_colors['TEXT_TERTIARY']))
+        self.setPalette(palette)
         sheet = STYLESHEET
         for key, value in self.current_colors.items(): sheet = sheet.replace(f"{{{key}}}", value)
         self.setStyleSheet(sheet)
@@ -621,6 +694,9 @@ class WhisperGUI(QWidget):
         if d: self.savePathEdit.setText(d)
 
     def dragEnterEvent(self, event):
+        if self.mainTabs.currentWidget() is not self.transcriptionPage:
+            event.ignore()
+            return
         if event.mimeData().hasUrls():
             event.acceptProposedAction()
             self.fileList.setProperty("dragging", True)
@@ -633,6 +709,9 @@ class WhisperGUI(QWidget):
         self.style().unpolish(self.fileList); self.style().polish(self.fileList)
 
     def dropEvent(self, event):
+        if self.mainTabs.currentWidget() is not self.transcriptionPage:
+            event.ignore()
+            return
         self.fileList.setProperty("dragging", False)
         self.style().unpolish(self.fileList); self.style().polish(self.fileList)
         paths = [url.toLocalFile() for url in event.mimeData().urls()]
@@ -649,7 +728,11 @@ class WhisperGUI(QWidget):
             return
         if self.setup_dialog and self.setup_dialog.is_busy(): return
         if not self.exe_path:
-            self.show_message('info', '尚未設定顯卡', '請從齒輪開啟「顯卡與引擎設定」，先完成 GPU 編譯。')
+            if is_packaged():
+                texts = distribution_strings(self.current_lang)
+                self.show_message('error', texts['setup_title'], texts['broken'])
+            else:
+                self.show_message('info', '尚未設定顯卡', '請從齒輪開啟「顯卡與引擎設定」，先完成 GPU 編譯。')
             return
 
         files_to_process = [self.fileList.item(i).data(Qt.UserRole) for i in range(self.fileList.count())]
@@ -757,14 +840,39 @@ class WhisperGUI(QWidget):
         settings = QSettings('Konata', 'KonataSub')
         self.api_profiles[self.api_config.protocol] = self.api_config
         save_api_profiles(settings, self.api_profiles, self.api_config)
+        self.conversionTab.refresh_service()
 
     def open_api_settings(self):
+        if self.conversionTab.is_busy() or self.diagnosticsTab.is_busy():
+            return
         from .ai_dialog import APISettingsDialog
         dialog = APISettingsDialog(self)
         dialog.exec_()
         dialog.deleteLater()
 
     def open_update_dialog(self):
+        if is_packaged():
+            texts = distribution_strings(self.current_lang)
+            from .widgets import CustomDialog
+            dialog = CustomDialog(self)
+            dialog.setWindowTitle(texts['updates_title'])
+            dialog.setStyleSheet(self.styleSheet())
+            dialog.setThemeColors(self.current_colors)
+            layout = QVBoxLayout(dialog)
+            label = QLabel(texts['updates'])
+            label.setWordWrap(True)
+            layout.addWidget(label)
+            open_button = QPushButton(texts['open_releases'], objectName='PrimaryButton')
+            open_button.clicked.connect(lambda: QDesktopServices.openUrl(QUrl('https://github.com/konata91008/KonataWhisperGUI-Public/releases/latest')))
+            layout.addWidget(open_button)
+            close_button = QPushButton(texts['close'])
+            close_button.clicked.connect(dialog.accept)
+            layout.addWidget(close_button)
+            dialog.setMinimumWidth(520)
+            dialog.exec_()
+            dialog.deleteLater()
+            return
+        if self.conversionTab.is_busy() or self.diagnosticsTab.is_busy(): return
         if self.setup_dialog and self.setup_dialog.is_busy(): return
         if self.is_downloading or (self.worker and self.worker.isRunning()):
             strings = update_strings(self.current_lang)
@@ -782,15 +890,14 @@ class WhisperGUI(QWidget):
             self.update_dialog.check()
 
     def restart_application(self):
+        if self.conversionTab.is_busy() or self.diagnosticsTab.is_busy(): return
         if self.setup_dialog and self.setup_dialog.is_busy(): return
         if (self.worker and self.worker.isRunning()) or self.is_downloading:
             return
         if self.update_dialog and self.update_dialog.is_busy():
             return
         self.save_settings()
-        result = QProcess.startDetached(sys.executable,
-                                        [str(PROJECT_ROOT / 'WhisperGUI' / 'main.py'), '--restarted'],
-                                        str(PROJECT_ROOT))
+        result = QProcess.startDetached(*restart_command())
         started = result[0] if isinstance(result, tuple) else result
         if not started:
             texts = update_strings(self.current_lang)
@@ -800,6 +907,9 @@ class WhisperGUI(QWidget):
         QApplication.instance().quit()
 
     def closeEvent(self, event):
+        if self.conversionTab.is_busy() or self.diagnosticsTab.is_busy():
+            event.ignore()
+            return
         if self.setup_dialog and self.setup_dialog.is_busy():
             event.ignore()
             return

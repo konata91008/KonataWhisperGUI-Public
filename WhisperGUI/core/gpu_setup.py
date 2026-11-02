@@ -439,5 +439,7 @@ def gpu_log_state(line, backend):
     lower = line.lower()
     if 'whisper_backend_init_gpu:' in lower:
         if 'no gpu found' in lower or 'failed to initialize' in lower: return 'failed'
-        if re.search(r'using\s+' + re.escape(backend) + r'\d*\s+backend', lower): return 'selected'
+        # Recent ggml names Metal devices MTL0; older engines used Metal.
+        name = r'(?:metal|mtl)' if backend == 'metal' else re.escape(backend)
+        if re.search(r'using\s+' + name + r'\d*\s+backend', lower): return 'selected'
     return None

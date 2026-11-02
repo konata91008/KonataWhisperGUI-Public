@@ -9,6 +9,7 @@ import re
 import urllib.request
 from PyQt5.QtCore import QThread, pyqtSignal
 from .gpu_setup import runtime_env, gpu_log_state
+from .network import ssl_context
 
 #
 # 這個檔案負責處理所有耗時的背景任務。
@@ -70,37 +71,30 @@ def download_task(worker_thread, main_window, model_name, base_dir):
     
     trans = main_window.translations
 
-    def progress_hook(count, block_size, total_size):
-        if worker_thread._is_cancelled:
-            raise ValueError("Download cancelled by user.")
-        
-        if total_size > 0:
-            percent = int(count * block_size * 100 / total_size)
-            downloaded_mb = count * block_size / (1024 * 1024)
-            total_mb = total_size / (1024 * 1024)
-            progress_text = trans['downloading_progress'].format(downloaded=downloaded_mb, total=total_mb)
-            worker_thread.progress_update.emit(percent, progress_text)
-        else:
-            downloaded_mb = count * block_size / (1024 * 1024)
-            progress_text = trans['downloading_progress_no_total'].format(downloaded=downloaded_mb)
-            worker_thread.progress_update.emit(0, progress_text)
-
-
+    temporary = model_path + '.part'
     try:
-        urllib.request.urlretrieve(url, model_path, reporthook=progress_hook)
-        
-        if worker_thread._is_cancelled:
-            if os.path.exists(model_path):
-                os.remove(model_path)
-            worker_thread.download_finished.emit(False)
-        else:
-            worker_thread.progress_update.emit(100, trans['download_complete'])
-            worker_thread.download_finished.emit(True)
-
-    except (urllib.error.URLError, ValueError, Exception) as e:
-        print(f"下載模型時發生錯誤: {e}")
-        if os.path.exists(model_path):
-            os.remove(model_path)
+        with urllib.request.urlopen(url, context=ssl_context(), timeout=60) as response, open(temporary, 'wb') as output:
+            total = int(response.headers.get('Content-Length', '0'))
+            downloaded = 0
+            while True:
+                if worker_thread._is_cancelled:
+                    raise ValueError('cancelled')
+                chunk = response.read(1024 * 1024)
+                if not chunk:
+                    break
+                output.write(chunk)
+                downloaded += len(chunk)
+                key = 'downloading_progress' if total else 'downloading_progress_no_total'
+                message = trans[key].format(downloaded=downloaded / 1048576, total=total / 1048576)
+                worker_thread.progress_update.emit(min(99, int(downloaded * 100 / total)) if total else 0, message)
+        if worker_thread._is_cancelled or not downloaded or (total and downloaded != total):
+            raise ValueError('incomplete model download')
+        os.replace(temporary, model_path)
+        worker_thread.progress_update.emit(100, trans['download_complete'])
+        worker_thread.download_finished.emit(True)
+    except Exception:
+        if os.path.exists(temporary):
+            os.remove(temporary)
         worker_thread.download_finished.emit(False)
 
 
@@ -155,16 +149,17 @@ def transcription_task(worker_thread, main_window, files, save_dir, model, lang,
         try:
             shutil.copy(f, temp_input_path)
             
-            ext = os.path.splitext(temp_input_path)[1].lower()
-            input_path_for_whisper = temp_input_path
-            
-            if ext not in ['.wav', '.mp3', '.ogg', '.flac']:
-                fd, tmp_wav = tempfile.mkstemp(suffix='.wav', dir=temp_dir)
-                os.close(fd)
-                tmp_wav_to_clean = tmp_wav
-                ffmpeg_cmd = ['ffmpeg', '-y', '-i', temp_input_path, '-ar', '16000', '-ac', '1', '-c:a', 'pcm_s16le', tmp_wav]
-                subprocess.run(ffmpeg_cmd, check=True, capture_output=True, text=True, encoding='utf-8', errors='replace', creationflags=creationflags, env=process_env)
-                input_path_for_whisper = tmp_wav
+            # Normalize every input, including stereo/float WAV and MP3. The
+            # standalone engine need not depend on optional codec build flags.
+            fd, tmp_wav = tempfile.mkstemp(suffix='.wav', dir=temp_dir)
+            os.close(fd)
+            tmp_wav_to_clean = tmp_wav
+            ffmpeg = gpu_runtime.get('ffmpeg', 'ffmpeg') if gpu_runtime else 'ffmpeg'
+            ffmpeg_cmd = [ffmpeg, '-nostdin', '-y', '-i', temp_input_path, '-vn', '-sn', '-dn',
+                          '-ar', '16000', '-ac', '1', '-c:a', 'pcm_s16le', tmp_wav]
+            subprocess.run(ffmpeg_cmd, check=True, capture_output=True, text=True, encoding='utf-8',
+                           errors='replace', creationflags=creationflags, env=process_env)
+            input_path_for_whisper = tmp_wav
 
             final_output_dir = save_dir if save_dir else os.path.dirname(f)
             
