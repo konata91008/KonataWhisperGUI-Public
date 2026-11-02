@@ -28,13 +28,14 @@ def main():
     build = ROOT / 'build/whisper'
     command = ['cmake', '-S', str(ROOT / 'whisper.cpp'), '-B', str(build),
         '-DCMAKE_BUILD_TYPE=Release', '-DBUILD_SHARED_LIBS=OFF', '-DGGML_NATIVE=OFF',
+        '-DGGML_SSE42=OFF', '-DGGML_AVX=OFF', '-DGGML_AVX2=OFF', '-DGGML_BMI2=OFF',
+        '-DGGML_FMA=OFF', '-DGGML_F16C=OFF',
         '-DGGML_OPENMP=OFF', '-DWHISPER_BUILD_TESTS=OFF', '-DWHISPER_BUILD_SERVER=OFF',
         '-DGGML_CUDA=OFF', '-DGGML_VULKAN=' + ('ON' if windows else 'OFF'),
         '-DGGML_METAL=' + ('OFF' if windows else 'ON'), '-DGGML_METAL_EMBED_LIBRARY=ON']
     if windows:
         command += ['-A', 'x64', '-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded',
-                    '-DCMAKE_POLICY_DEFAULT_CMP0091=NEW', '-DGGML_AVX=OFF', '-DGGML_AVX2=OFF',
-                    '-DGGML_FMA=OFF', '-DGGML_F16C=OFF']
+                    '-DCMAKE_POLICY_DEFAULT_CMP0091=NEW']
         # whisper-cli accepts narrow argv and its model loader expects UTF-8.
         # Set the process code page without changing the user's Windows locale.
         manifest = ROOT / 'packaging/windows-runtime.manifest'

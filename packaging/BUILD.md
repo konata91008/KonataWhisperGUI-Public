@@ -37,3 +37,5 @@ The FFmpeg archive is SHA256-verified before extraction. Its complete build conf
 Release binaries contain no models, API keys, local settings, source virtual environments or Git credentials. `v4.13.0` must match `WhisperGUI/version.json`. Push a version tag only after the main-branch workflow passes. A tag run rebuilds/tests all three platforms before the release job uploads installers, portable archives, source archive, licenses, installation instructions and SHA256 files.
 
 Current signing: macOS ad hoc only; no Developer ID/notarization credentials or Windows code-signing certificate are configured. Do not label these packages notarized or signed by a verified publisher.
+
+The x64 CPU support code is built without optional SSE4.2/AVX/AVX2/BMI2/FMA/F16C requirements, so the build runner's processor does not impose those requirements on users. Transcription in the normal UI still requires a compatible GPU and driver. Windows includes the checksum-verified x64 loader from LunarG's runtime-components ZIP; it does not depend on the SDK being installed on an end-user computer.
