@@ -1,5 +1,14 @@
 # 版本紀錄
 
+## v4.13.1 — 2026-11-02（原始碼更新）
+
+- 修正一鍵啟動時殘缺 Python 套件無法修復，以及中文／空白資料夾內 Qt 外掛路徑問題；失效 venv 先備份再重建。
+- CUDA 偵測補上必要標頭、函式庫及 Visual Studio 整合檔檢查，修正工具版本排序與 NVIDIA CSV 解析。
+- 安裝後使用更新的 Windows 環境變數；CUDA 僅安裝必要編譯元件，不變更顯示卡驅動，並避免自動重開機。
+- 原始碼編譯的 Windows 引擎也嵌入 UTF-8 manifest，支援中文模型、音訊與匯出路徑。
+- 加入安裝／編譯／GUI 失敗復原測試及 Windows CUDA、Vulkan、兩種 Mac 架構的原始碼工作流程。詳見 [測試範圍與硬體限制](SOURCE_TESTING.md)。
+- 此次更新針對原始碼；既有 v4.13.0 Release 安裝檔保持不變。
+
 ## v4.13.0 — 2026-11-02
 
 - 首次提供 Windows x64 安裝程式／免安裝 ZIP，以及 Mac Apple Silicon／Intel DMG 與 app ZIP。

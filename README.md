@@ -2,7 +2,7 @@
 
 支援 macOS 與 Windows 的 whisper.cpp 語音轉錄介面，提供秋日暖色主題、字幕匯出、語言轉換、字幕排錯、GPU 設定與選用的 AI 字幕優化。
 
-版本：**v4.13.0 · 2026-11-02**
+原始碼版本：**v4.13.1 · 2026-11-02**（目前安裝包仍為 v4.13.0）
 
 版本變更請見 [版本紀錄](CHANGELOG.md)。
 
@@ -53,6 +53,8 @@ Mac 需求為 macOS 12 以上及可用的 Metal GPU。Windows 需求為 x64 處�
 - macOS：偵測系統預設 Metal GPU，依 Apple Silicon／Intel 主機架構編譯。
 - Windows NVIDIA：由驅動讀取 Compute Capability，確認 CUDA 工具支援該架構後編譯。
 - Windows AMD／Intel：使用 Vulkan，驗證驅動提供的實體 GPU 後編譯。
+
+CUDA 設定會檢查架構支援、必要函式庫及 Visual Studio 整合檔；缺少元件時可重新安裝。CUDA 安裝只補編譯工具，不替換現有 NVIDIA 顯示卡驅動。詳細測試範圍與實機驗證指令見 [原始碼測試說明](SOURCE_TESTING.md)。
 
 編譯結果放在 `whisper.cpp/build/tjksub/`，成功後透過 `whisper.cpp/build/tjksub-runtime.json` 指定使用的引擎。GPU 初始化失敗會停止轉錄，不會自行改用 CPU 模式；GPU 加速仍會使用 CPU 做音訊前處理與部分工作。
 

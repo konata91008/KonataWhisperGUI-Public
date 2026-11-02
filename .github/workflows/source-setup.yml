@@ -41,11 +41,7 @@ jobs:
       - name: Bootstrap official WinGet client on the ephemeral runner
         shell: powershell
         timeout-minutes: 10
-        run: |
-          Install-PackageProvider -Name NuGet -Force | Out-Null
-          Install-Module -Name Microsoft.WinGet.Client -Force -Repository PSGallery
-          Repair-WinGetPackageManager -AllUsers
-          $env:LOCALAPPDATA + '\Microsoft\WindowsApps' | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+        run: ./tools/ci_prepare_winget.ps1
       - name: Clean first launch and setup launcher
         shell: cmd
         run: |
@@ -105,11 +101,7 @@ jobs:
         if: runner.os == 'Windows'
         shell: powershell
         timeout-minutes: 10
-        run: |
-          Install-PackageProvider -Name NuGet -Force | Out-Null
-          Install-Module -Name Microsoft.WinGet.Client -Force -Repository PSGallery
-          Repair-WinGetPackageManager -AllUsers
-          $env:LOCALAPPDATA + '\Microsoft\WindowsApps' | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+        run: ./tools/ci_prepare_winget.ps1
       - name: Windows source launcher
         if: runner.os == 'Windows'
         shell: cmd

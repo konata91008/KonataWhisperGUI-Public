@@ -4,6 +4,7 @@ import json
 import platform
 import shutil
 import subprocess
+import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -24,8 +25,19 @@ def main():
         subprocess.run(['ditto', str(app), str(staging / app.name)], check=True)
         (staging / 'Applications').symlink_to('/Applications')
         shutil.copy2(ROOT / 'packaging/INSTALL.md', staging / 'Read me.txt')
-        subprocess.run(['hdiutil', 'create', '-volname', 'TJKSub', '-srcfolder', str(staging),
-                        '-ov', '-format', 'UDZO', str(out / f'TJKSub-{version}-macos-{arch}.dmg')], check=True)
+        command = ['hdiutil', 'create', '-volname', 'TJKSub', '-srcfolder', str(staging),
+                   '-ov', '-format', 'UDZO', str(out / f'TJKSub-{version}-macos-{arch}.dmg')]
+        # DiskImages on hosted Macs can briefly hold a staging volume open.
+        # Retry only this explicit transient error; propagate all other failures.
+        for attempt in range(3):
+            result = subprocess.run(command, capture_output=True, text=True)
+            print(result.stdout, end='')
+            print(result.stderr, end='')
+            if result.returncode == 0:
+                break
+            if 'Resource busy' not in result.stderr or attempt == 2:
+                result.check_returncode()
+            time.sleep(5 * (attempt + 1))
         subprocess.run(['ditto', '-c', '-k', '--sequesterRsrc', '--keepParent', str(app),
                         str(out / f'TJKSub-{version}-macos-{arch}.zip')], check=True)
     else:
