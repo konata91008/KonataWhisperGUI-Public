@@ -321,7 +321,8 @@ def run_logged(args, log, env=None, cwd=None, timeout=3600):
 def cuda_install_args(version):
     # Install only build/runtime components; keep the user's display driver.
     parts = ('nvcc', 'cudart', 'cublas', 'cublas_dev', 'thrust', 'visual_studio_integration')
-    return '-s -n ' + ' '.join(f'{part}_{version}' for part in parts)
+    # Match WinGet's official manifest: also silence the self-extracting wrapper.
+    return '-y -gm2 -s -n ' + ' '.join(f'{part}_{version}' for part in parts)
 
 
 def install_tools(scan, gpu, log, runner=run_logged, unattended=False):

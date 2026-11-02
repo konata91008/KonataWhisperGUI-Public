@@ -15,6 +15,9 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+concurrency:
+  group: source-setup-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   cuda:
     name: Windows CUDA sm_${{ matrix.cc }}

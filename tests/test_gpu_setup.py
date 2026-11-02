@@ -85,6 +85,8 @@ class GPUSetupTests(unittest.TestCase):
         self.assertIn('cublas_dev_12.9', override)
         self.assertNotIn('Display.Driver', override)
         self.assertIn('-n', override.split())
+        self.assertIn('-y', override.split())
+        self.assertIn('-gm2', override.split())
 
     def test_cmake_never_installs_into_global_python(self):
         scan, gpu = self.windows(); scan.tools['cmake'] = None
