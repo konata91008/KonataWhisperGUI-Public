@@ -162,4 +162,5 @@ jobs:
           RELEASE_TAG: ${{ github.ref_name }}
         run: |
           python -c 'import json,os; assert "v"+json.load(open("WhisperGUI/version.json"))["version"] == os.environ["RELEASE_TAG"]'
+          python packaging/release_checksums.py release-artifacts
           gh release create "$RELEASE_TAG" release-artifacts/* --verify-tag --title "TJKSub $RELEASE_TAG" --notes-file packaging/RELEASE_NOTES.md

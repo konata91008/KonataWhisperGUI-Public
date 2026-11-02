@@ -1,0 +1,30 @@
+name: Verify published release checksums
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - packaging/release_checksums.py
+      - .github/workflows/repair-release-checksums.yml
+permissions:
+  contents: write
+jobs:
+  checksums:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Reconcile metadata against the existing release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="v$(python -c 'import json; print(json.load(open("WhisperGUI/version.json"))["version"])')"
+          if ! gh release view "$tag" >/dev/null 2>&1; then
+            echo 'This version has not been published; nothing to repair.'
+            exit 0
+          fi
+          gh release download "$tag" --dir published-assets
+          python packaging/release_checksums.py published-assets
+          gh release upload "$tag" published-assets/SHA256SUMS-*.txt --clobber
