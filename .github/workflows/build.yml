@@ -53,15 +53,15 @@ jobs:
       - name: Test macOS source launcher
         if: runner.os == 'macOS'
         run: bash start_mac.command --self-test build/launcher-smoke.json
-      - name: Cache native engines and test model
+      - name: Restore native engine cache
         id: native-cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
             build/native
             build/licenses/vulkan
             build/downloads
-          key: native-${{ matrix.platform }}-${{ hashFiles('whisper.cpp/**', 'packaging/build_native.py', 'packaging/build_ffmpeg.sh', 'packaging/sources.json', 'packaging/install_vulkan.ps1', 'packaging/windows-runtime.manifest') }}
+          key: native-${{ matrix.platform }}-${{ hashFiles('whisper.cpp/**', 'packaging/build_native.py', 'packaging/build_ffmpeg.sh', 'packaging/sources.json', 'packaging/install_vulkan.ps1', 'packaging/windows-runtime.manifest', 'packaging/prepare_vulkan_runtime.py') }}
       - name: Prepare verified FFmpeg sources
         run: python packaging/prepare_ffmpeg.py
       - name: Install Vulkan SDK for Windows build
@@ -85,6 +85,15 @@ jobs:
       - name: Build Metal engine and static FFmpeg on macOS
         if: runner.os == 'macOS' && steps.native-cache.outputs.cache-hit != 'true'
         run: python packaging/build_native.py
+      - name: Save completed native engines before app packaging
+        if: steps.native-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            build/native
+            build/licenses/vulkan
+            build/downloads
+          key: ${{ steps.native-cache.outputs.cache-primary-key }}
       - name: Bundle Python, Qt, engine, codecs and resources
         run: |
           python packaging/prepare_assets.py

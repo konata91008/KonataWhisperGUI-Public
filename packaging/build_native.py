@@ -7,6 +7,7 @@ import shutil
 import subprocess
 from pathlib import Path
 from prepare_ffmpeg import prepare
+from prepare_vulkan_runtime import prepare as prepare_vulkan_runtime
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -21,6 +22,8 @@ def main():
     if not args.ffmpeg_ready:
         subprocess.run(['bash', str(ROOT / 'packaging/build_ffmpeg.sh')], check=True)
     windows = platform.system() == 'Windows'
+    if windows:
+        prepare_vulkan_runtime(native)
     backend = 'vulkan' if windows else 'metal'
     build = ROOT / 'build/whisper'
     command = ['cmake', '-S', str(ROOT / 'whisper.cpp'), '-B', str(build),
@@ -44,15 +47,6 @@ def main():
     subprocess.run(['cmake', '--build', str(build), '--config', 'Release', '--target', 'whisper-cli', '--parallel', '4'], check=True)
     executable = build / ('bin/Release/whisper-cli.exe' if windows else 'bin/whisper-cli')
     shutil.copy2(executable, native / executable.name)
-    if windows:
-        loader = Path(os.environ['VULKAN_SDK']) / 'Bin/vulkan-1.dll'
-        shutil.copy2(loader, native / 'vulkan-1.dll')
-        # Loader redistributable license accompanies the runtime library.
-        for license in (Path(os.environ['VULKAN_SDK']) / 'License').rglob('*'):
-            if license.is_file() and license.suffix.lower() in ('.txt', '.html', '.md'):
-                destination = ROOT / 'build/licenses/vulkan' / license.name
-                destination.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copy2(license, destination)
     (native / 'runtime.json').write_text(json.dumps({'schema': 1, 'system': platform.system(),
         'machine': platform.machine().lower(), 'backend': backend}, indent=2))
     subprocess.run([str(native / executable.name), '--help'], check=True, cwd=native)
