@@ -54,7 +54,7 @@ jobs:
           call tools\setup_windows.bat --self-test build/setup-launcher-smoke.json
       - name: Regression tests in the launcher-created environment
         run: venv/Scripts/python.exe -m unittest discover -s tests -v
-      - name: Install CUDA and FFmpeg, compile selected architecture, test exports
+      - name: Install CUDA and FFmpeg, compile selected architecture and inspect runtime
         run: venv/Scripts/python.exe tools/verify_source_setup.py --backend cuda --install-tools --ci-cuda-cc ${{ matrix.cc }} ${{ matrix.extra }}
       - name: Attach evidence (no NVIDIA hardware on this runner)
         if: always()

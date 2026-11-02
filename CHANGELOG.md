@@ -3,7 +3,7 @@
 ## v4.13.1 — 2026-11-02（原始碼更新）
 
 - 修正一鍵啟動時殘缺 Python 套件無法修復，以及中文／空白資料夾內 Qt 外掛路徑問題；失效 venv 先備份再重建。
-- CUDA 偵測補上必要標頭、函式庫及 Visual Studio 整合檔檢查，修正工具版本排序與 NVIDIA CSV 解析。
+- CUDA 偵測補上必要標頭、函式庫、執行階段 DLL 及 Visual Studio 整合檔檢查；支援 CUDA 13 的 `bin/x64` DLL 路徑，修正工具版本排序與 NVIDIA CSV 解析。
 - 安裝後使用更新的 Windows 環境變數；CUDA 改用經 SHA256 驗證的 NVIDIA 官方獨立元件，避開原廠安裝程式的 IDE 整合等待；不變更驅動或自動重開機。
 - Windows 編譯改用短暫存路徑，避免 Vulkan 子專案超過 MSVC 路徑限制；成功後移入專案，失敗保留診斷。
 - 原始碼編譯的 Windows 引擎也嵌入 UTF-8 manifest，支援中文模型、音訊與匯出路徑。

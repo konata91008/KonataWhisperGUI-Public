@@ -8,7 +8,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'WhisperGUI'))
-from core.gpu_setup import GPU, build_gpu, install_tools, scan_host, runtime_env
+from core.gpu_setup import GPU, build_gpu, install_tools, scan_host, runtime_env, run_logged, cuda_toolkit, cuda_binary_dirs
+from cuda_ci import DriverUnavailable, probe_cuda_launch
 
 
 def main():
@@ -56,7 +57,25 @@ def main():
         if args.install_tools:
             install_tools(scan, gpu, log, unattended=ci_fixture)
             scan = scan_host()
-        runtime = build_gpu(ROOT, scan, gpu, log)
+        def runner(command, logger, **kwargs):
+            if args.ci_cuda_cc and command[-1:] == ['--help']:
+                kit = cuda_toolkit(scan, gpu)
+                return probe_cuda_launch(command, logger, cuda_binary_dirs(kit['root']), scan.tools['vs'], **kwargs)
+            return run_logged(command, logger, **kwargs)
+        try:
+            runtime = build_gpu(ROOT, scan, gpu, log, runner=runner)
+        except DriverUnavailable as exc:
+            # build_gpu deliberately does not activate an engine that cannot launch.
+            # Verify actual PE imports instead of supplying a fake driver/GPU.
+            report = {'ok': True, 'backend': 'cuda', 'compute_capability': gpu.cc,
+                      'compiled': True, 'launchable': False, 'gpu_execution_verified': False,
+                      'install_requested': args.install_tools, 'exports_tested': False,
+                      'launch_blocked_by': 'missing NVIDIA display driver (nvcuda.dll)',
+                      'dependency_check': exc.evidence,
+                      'note': 'Real CUDA compilation and DLL inspection passed; launch/transcription require a Windows NVIDIA machine.'}
+            (ROOT / 'build/source-setup.json').write_text(json.dumps(report, indent=2), encoding='utf-8')
+            print(json.dumps(report))
+            return
     env = runtime_env(runtime)
     command = [sys.executable, str(ROOT / 'packaging/smoke_transcription.py'), '--source-runtime']
     if not ci_fixture:

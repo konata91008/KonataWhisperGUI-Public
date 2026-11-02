@@ -6,10 +6,10 @@
 
 - `Desktop packages`：Windows、Mac Apple Silicon、Mac Intel 的全新 Python 環境、一般啟動器、損壞環境備份、殘缺套件修復及中文／空白路徑。測試使用暫存副本，不動使用者模型。
 - `Source setup and CUDA`：使用與設定視窗相同的工具偵測、安裝及 `build_gpu()`。Windows 經 NVIDIA 官方 redistributable 安裝 CUDA（每包 SHA256 與大小均鎖定），經 WinGet 安裝 FFmpeg；測試 Pascal `sm_61` 與 Blackwell `sm_121`。其中一組另安裝 Visual Studio Build Tools。Vulkan 與兩種 Mac 架構也執行原始碼編譯流程。
-- CUDA 編譯測試使用明確標示的 CI 架構輸入；沒有模擬成功的 NVIDIA 驅動或 GPU 執行結果。啟動檢查後，以明確指定的 CPU 測試 FFmpeg → Whisper → SRT／TXT，涵蓋中文／空白模型與音訊路徑。
+- CUDA 編譯測試使用明確標示的 CI 架構輸入；沒有模擬成功的 NVIDIA 驅動或 GPU 執行結果。CI 會實際嘗試啟動 CUDA 引擎。若測試機缺少 NVIDIA 驅動的 `nvcuda.dll`，則用 Visual Studio `dumpbin` 遞迴檢查引擎與 CUDA DLL 相依，只有缺少這一個驅動時才記為硬體限制；其他缺檔或錯誤仍會失敗。此情況不啟用該引擎、不執行 CUDA 版轉錄，也不提供假驅動。Vulkan／Metal 與封裝工作流程以明確指定的 CPU 測試 FFmpeg → Whisper → SRT／TXT，涵蓋中文／空白模型與音訊路徑。
 - 回歸測試涵蓋工具缺漏、CUDA 架構選擇、安裝順序、重新偵測、失敗保留舊引擎、GUI 授權勾選及工作中關閉保護。
 
-工作流程結果與附件見 [GitHub Actions](https://github.com/konata91008/KonataWhisperGUI-Public/actions)。每次來源測試附上 `source-setup.json`、安裝編譯記錄及轉錄測試記錄，`gpu_execution_verified` 表示是否真的驗證 GPU。
+工作流程結果與附件見 [GitHub Actions](https://github.com/konata91008/KonataWhisperGUI-Public/actions)。每次來源測試附上 `source-setup.json`、安裝編譯記錄及轉錄測試記錄，`gpu_execution_verified` 表示是否真的驗證 GPU；`launchable` 與 `launch_blocked_by` 另記錄啟動結果。
 
 ## 有實體顯卡時執行
 
@@ -40,7 +40,8 @@ venv/bin/python tools/verify_source_setup.py --backend metal
 ## 驗證限制
 
 - Mac Apple M4：已實際完成一鍵安裝、Metal 編譯、GPU 轉錄及字幕匯出。
-- Windows CUDA／Vulkan、Intel Mac Metal：CI 驗證安裝、編譯與 CPU 匯出流程；仍需對應硬體驗證 GPU 加速。
+- Windows CUDA：CI 驗證安裝、完整編譯／連結與 DLL 相依；無驅動的 runner 無法啟動 CUDA 引擎或驗證轉錄，仍需 Windows NVIDIA 實機完成。
+- Windows Vulkan、Intel Mac Metal：CI 驗證安裝、編譯與 CPU 匯出流程；仍需對應硬體驗證 GPU 加速。
 - CI 使用預裝部分系統元件的 runner，不等於所有 Windows 10／11 安裝狀態；UAC、重開機、驅動差異仍會依使用者環境而異。
 - Premiere、DaVinci Resolve 等剪輯軟體的匯入相容性未由這些測試涵蓋。
 
