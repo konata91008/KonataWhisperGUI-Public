@@ -61,7 +61,7 @@ jobs:
             build/native
             build/licenses/vulkan
             build/downloads
-          key: native-${{ matrix.platform }}-${{ hashFiles('whisper.cpp/**', 'packaging/build_native.py', 'packaging/build_ffmpeg.sh', 'packaging/sources.json', 'packaging/install_vulkan.ps1') }}
+          key: native-${{ matrix.platform }}-${{ hashFiles('whisper.cpp/**', 'packaging/build_native.py', 'packaging/build_ffmpeg.sh', 'packaging/sources.json', 'packaging/install_vulkan.ps1', 'packaging/windows-runtime.manifest') }}
       - name: Prepare verified FFmpeg sources
         run: python packaging/prepare_ffmpeg.py
       - name: Install Vulkan SDK for Windows build

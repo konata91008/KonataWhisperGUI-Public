@@ -26,7 +26,7 @@ On hosted machines without a usable GPU, omit `--require-gpu` for the pipeline s
 
 ## Windows x64
 
-Use Visual Studio 2022 C++ Build Tools, Python 3.12 x64, MSYS2 MINGW64 (`make mingw-w64-x86_64-gcc diffutils`), Vulkan SDK 1.4.363.0, and Inno Setup 6. Set `VULKAN_SDK` and add its `Bin` directory to PATH. Install `packaging/requirements-build.txt` in a fresh virtual environment. Run `prepare_ffmpeg.py`, build `packaging/build_ffmpeg.sh` from MINGW64, then `build_native.py --ffmpeg-ready` from the Python environment. Follow the same asset, PyInstaller, self-test, transcription, release and install-test steps. The packaged executable is `dist/TJKSub/TJKSub.exe`; native binaries live in its `_internal/native` directory. `ISCC` should be on PATH or installed in its default Program Files (x86) location.
+Use Visual Studio 2022 C++ Build Tools, Python 3.12 x64, MSYS2 MINGW64 (`make mingw-w64-x86_64-gcc diffutils`), Vulkan SDK 1.4.363.0, and Inno Setup 6. Set `VULKAN_SDK` and add its `Bin` directory to PATH. Install `packaging/requirements-build.txt` in a fresh virtual environment. Run `prepare_ffmpeg.py`, build `packaging/build_ffmpeg.sh` from MINGW64, then `build_native.py --ffmpeg-ready` from the Python environment. Follow the same asset, PyInstaller, self-test, transcription, release and install-test steps. The native Windows engine embeds `windows-runtime.manifest` to use UTF-8 for command-line paths without changing the system locale (Windows 10 1903+). The packaged executable is `dist/TJKSub/TJKSub.exe`; native binaries live in its `_internal/native` directory. `ISCC` should be on PATH or installed in its default Program Files (x86) location.
 
 ## Distribution and validation
 

@@ -32,6 +32,10 @@ def main():
         command += ['-A', 'x64', '-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded',
                     '-DCMAKE_POLICY_DEFAULT_CMP0091=NEW', '-DGGML_AVX=OFF', '-DGGML_AVX2=OFF',
                     '-DGGML_FMA=OFF', '-DGGML_F16C=OFF']
+        # whisper-cli accepts narrow argv and its model loader expects UTF-8.
+        # Set the process code page without changing the user's Windows locale.
+        manifest = ROOT / 'packaging/windows-runtime.manifest'
+        command += [f'-DCMAKE_EXE_LINKER_FLAGS=/MANIFEST:EMBED /MANIFESTINPUT:"{manifest}"']
         if os.environ.get('VULKAN_SDK'):
             command += ['-DCMAKE_PREFIX_PATH=' + os.environ['VULKAN_SDK']]
     else:

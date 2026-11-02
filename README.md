@@ -12,7 +12,7 @@
 
 | 系統 | 下載檔案 | 安裝方式 |
 | --- | --- | --- |
-| Windows 10/11 x64 | `TJKSub-4.13.0-windows-x64-setup.exe` | 執行安裝程式，安裝至目前使用者帳戶 |
+| Windows 10 1903 以上／11 x64 | `TJKSub-4.13.0-windows-x64-setup.exe` | 執行安裝程式，安裝至目前使用者帳戶 |
 | Mac Apple Silicon（M 系列） | `TJKSub-4.13.0-macos-arm64.dmg` | 開啟後把 TJKSub 拖進 Applications |
 | Mac Intel | `TJKSub-4.13.0-macos-x86_64.dmg` | 開啟後把 TJKSub 拖進 Applications |
 

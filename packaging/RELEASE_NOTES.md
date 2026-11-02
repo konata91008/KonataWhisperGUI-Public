@@ -4,7 +4,7 @@ TJKSub v4.13.0 · 更新日期 2026-11-02
 
 | 電腦 | 建議下載 |
 | --- | --- |
-| Windows 10/11 x64 | `TJKSub-4.13.0-windows-x64-setup.exe` |
+| Windows 10 1903 以上／11 x64 | `TJKSub-4.13.0-windows-x64-setup.exe` |
 | Mac Apple Silicon（M 系列） | `TJKSub-4.13.0-macos-arm64.dmg` |
 | Mac Intel | `TJKSub-4.13.0-macos-x86_64.dmg` |
 

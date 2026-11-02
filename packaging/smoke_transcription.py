@@ -48,16 +48,17 @@ def main():
         **{name: Signal() for name in ('progress_update', 'file_finished', 'file_result',
            'all_finished', 'log_message_received', 'subtitle_line_received')})
     with tempfile.TemporaryDirectory(prefix='tjksub-transcription-') as temp:
-        folder = Path(temp)
+        folder = Path(temp) / '模型與暫存 with spaces'
+        folder.mkdir()
         (folder / 'models').mkdir()
-        os.link(model, folder / 'models/ggml-tiny.bin')
+        shutil.copy2(model, folder / 'models/ggml-tiny.bin')
         audio = folder / '語音 sample.mp3'
         shutil.copy2(ROOT / 'whisper.cpp/samples/jfk.mp3', audio)
         output = folder / '字幕 outputs'
         output.mkdir()
         transcription_task(worker, SimpleNamespace(translations=TRANSLATIONS['en']), [str(audio)],
                            str(output), 'tiny', 'en', runtime['backend'] if args.require_gpu else 'CPU',
-                           '', True, True, runtime['path'], str(folder), temp,
+                           '', True, True, runtime['path'], str(folder), str(folder),
                            gpu_runtime=runtime if args.require_gpu else None)
         log = '\n'.join(call[0] for call in worker.log_message_received.calls)
         report_name = 'gpu-transcription' if args.require_gpu else 'cpu-transcription'
