@@ -58,7 +58,7 @@ CUDA 設定會檢查架構支援、必要函式庫及 Visual Studio 整合檔；
 
 編譯結果放在 `whisper.cpp/build/tjksub/`，成功後透過 `whisper.cpp/build/tjksub-runtime.json` 指定使用的引擎。GPU 初始化失敗會停止轉錄，不會自行改用 CPU 模式；GPU 加速仍會使用 CPU 做音訊前處理與部分工作。
 
-Mac Apple Silicon 已完成 Metal 實際音訊轉錄與 SRT／TXT 匯出測試。Windows／Intel Mac 透過對應 GitHub runner 驗證建置、啟動、安裝及 CPU 轉錄流程；CI 的 CPU 模式僅用於測試，產品仍要求 GPU。CUDA 另驗證完整編譯及 DLL 相依；無 NVIDIA 驅動的 CI 無法啟動 CUDA 引擎。Windows CUDA／Vulkan 與 Intel Mac Metal 尚待實體顯卡驗證，不能保證所有顯卡與驅動組合都能使用。
+Mac Apple Silicon 已完成 Metal 實際音訊轉錄與 SRT／TXT 匯出測試。Windows／Intel Mac 透過對應 GitHub runner 驗證建置、啟動、安裝及 CPU 轉錄流程；CI 的 CPU 模式僅用於測試，產品仍要求 GPU。CUDA 12.9 另驗證完整編譯及 DLL 相依，啟動因 CI 缺少 NVIDIA 驅動而未驗證；CUDA 13.4 已通過啟動與 CPU 轉錄。Windows CUDA／Vulkan 與 Intel Mac Metal 尚待實體顯卡驗證，不能保證所有顯卡與驅動組合都能使用。
 
 ## 語言轉換
 

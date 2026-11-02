@@ -42,10 +42,25 @@ venv/bin/python tools/verify_source_setup.py --backend metal
 ## 驗證限制
 
 - Mac Apple M4：已實際完成一鍵安裝、Metal 編譯、GPU 轉錄及字幕匯出。
-- Windows CUDA：CI 驗證安裝、完整編譯／連結與 DLL 相依；無驅動的 runner 無法啟動 CUDA 引擎或驗證轉錄，仍需 Windows NVIDIA 實機完成。
+- Windows CUDA：CI 驗證安裝、完整編譯／連結。12.9 本次因缺少 `nvcuda.dll`，另驗證 DLL 相依並將啟動／轉錄記為未驗證；13.4 本次可啟動並通過 CPU 轉錄。兩者的 GPU 加速仍需 Windows NVIDIA 實機。
 - Windows Vulkan、Intel Mac Metal：CI 驗證安裝、編譯與 CPU 匯出流程；仍需對應硬體驗證 GPU 加速。
 - CI 使用預裝部分系統元件的 runner，不等於所有 Windows 10／11 安裝狀態；UAC、重開機、驅動差異仍會依使用者環境而異。
 - Premiere、DaVinci Resolve 等剪輯軟體的匯入相容性未由這些測試涵蓋。
+
+## 2026-11-02 驗證結果
+
+引擎與安裝邏輯測試提交：`a27c104`；Python 相容性工作流程與封裝測試提交：`6766e7e`。之後的測試紀錄文件更新不改變程式碼。
+
+| 項目 | 實際結果 |
+| --- | --- |
+| Windows CUDA 12.9／sm_61 | 官方元件下載及 SHA256、Build Tools 安裝、完整編譯／連結通過；DLL 相依僅缺 NVIDIA 驅動 `nvcuda.dll`。未啟動、未轉錄，不啟用未通過啟動的引擎。 |
+| Windows CUDA 13.4／sm_121 | 官方元件下載及 SHA256、完整編譯、啟動、中文／空白路徑 CPU 轉錄與 SRT／TXT 匯出通過。未驗證實體 GPU。 |
+| Windows Vulkan／Mac Apple Silicon／Mac Intel | 原始碼設定啟動器、工具安裝、引擎編譯、啟動與 CPU 轉錄／匯出通過。 |
+| 本機 Apple M4 | 全新原始碼環境、Metal 編譯、實際 GPU 轉錄與 SRT／TXT 匯出通過。 |
+| Python 3.10／3.11 × Windows／兩種 Mac | 六組空白 venv 的套件安裝、設定啟動器、介面開啟與各 75 項回歸測試均通過。Intel Mac 3.11 曾遇到 原始碼下載停滯，單組重試後通過。 |
+| Windows／兩種 Mac 的完整封裝流程 | 各 75 項回歸測試、原始碼啟動、損壞 venv／套件修復、封裝、安裝及搬移啟動通過。 |
+
+[原始碼與 CUDA 完整記錄](https://github.com/konata91008/KonataWhisperGUI-Public/actions/runs/41399918661)、[Python 3.10／3.11 相容性記錄](https://github.com/konata91008/KonataWhisperGUI-Public/actions/runs/41401583295)、[封裝與 Python 3.12 記錄](https://github.com/konata91008/KonataWhisperGUI-Public/actions/runs/41401583271)。
 
 ## 原廠參考
 
