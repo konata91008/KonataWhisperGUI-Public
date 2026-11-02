@@ -42,6 +42,7 @@ def refreshed_env():
     if os.name == 'nt':
         import winreg
         paths = [env.get('PATH', '')]
+        variables = {name.upper(): value for name, value in env.items()}
         for hive, key in [(winreg.HKEY_LOCAL_MACHINE, r'SYSTEM\CurrentControlSet\Control\Session Manager\Environment'),
                           (winreg.HKEY_CURRENT_USER, r'Environment')]:
             try:
@@ -49,13 +50,47 @@ def refreshed_env():
                     for i in range(winreg.QueryInfoKey(reg)[1]):
                         name, value, _ = winreg.EnumValue(reg, i)
                         if name.upper() == 'PATH':
-                            paths.append(os.path.expandvars(value))
-                        elif name.upper() in ('CUDA_PATH', 'VULKAN_SDK'):
-                            env[name.upper()] = os.path.expandvars(value)
+                            paths.append(value)
+                        elif isinstance(value, str):
+                            variables[name.upper()] = value
             except OSError:
                 pass
-        env['PATH'] = os.pathsep.join(paths)
+        for name in ('CUDA_PATH', 'VULKAN_SDK'):
+            if name in variables:
+                env[name] = expand_windows_vars(variables[name], variables)
+        env['PATH'] = os.pathsep.join(expand_windows_vars(p, variables) for p in paths)
     return env
+
+
+def expand_windows_vars(value, variables):
+    """Registry paths may refer to variables added after this GUI was launched."""
+    for _ in range(10):
+        expanded = re.sub(r'%([^%]+)%', lambda m: variables.get(m[1].upper(), m[0]), value)
+        if expanded == value:
+            break
+        value = expanded
+    return value
+
+
+def version_key(value):
+    return tuple(int(x) for x in re.findall(r'\d+', str(value)))
+
+
+def inspect_cuda(root):
+    root = Path(root)
+    nvcc = root / 'bin/nvcc.exe'
+    if not nvcc.is_file():
+        return None
+    extensions = root / 'extras/visual_studio_integration/MSBuildExtensions'
+    required = ['include/cuda.h', 'include/cuda_runtime.h', 'include/cublas_v2.h',
+                'lib/x64/cudart.lib', 'lib/x64/cublas.lib']
+    missing = [name for name in required if not (root / name).is_file()]
+    for pattern in ('CUDA *.props', 'CUDA *.targets', 'Nvda.Build.CudaTasks*.dll'):
+        if not any(extensions.glob(pattern)):
+            missing.append('Visual Studio integration: ' + pattern)
+    targets = re.findall(r'\bsm_(\d+)\b', capture([nvcc, '--list-gpu-code']))
+    return {'root': str(root), 'targets': targets, 'version': capture([nvcc, '--version']),
+            'missing': missing}
 
 
 @dataclass
@@ -92,7 +127,7 @@ class Scan:
 
 def parse_nvidia(text):
     result = []
-    for row in csv.reader(io.StringIO(text)):
+    for row in csv.reader(io.StringIO(text), skipinitialspace=True):
         if len(row) != 5:
             continue
         index, identity, name, capability, driver = (s.strip() for s in row)
@@ -176,12 +211,10 @@ def scan_host():
         if env.get('CUDA_PATH'):
             cuda_roots.append(Path(env['CUDA_PATH']))
         scan.tools['cuda'] = []
-        for root in sorted(set(cuda_roots), reverse=True):
-            nvcc = root / 'bin/nvcc.exe'
-            if nvcc.is_file():
-                targets = re.findall(r'\bsm_(\d+)\b', capture([nvcc, '--list-gpu-code']))
-                version = capture([nvcc, '--version'])
-                scan.tools['cuda'].append({'root': str(root), 'targets': targets, 'version': version})
+        for root in sorted(set(cuda_roots), key=lambda p: version_key(p.name), reverse=True):
+            toolkit = inspect_cuda(root)
+            if toolkit:
+                scan.tools['cuda'].append(toolkit)
         sdk_roots = list(Path(env.get('SystemDrive', 'C:') + '/VulkanSDK').glob('*'))
         if env.get('VULKAN_SDK'):
             sdk_roots.insert(0, Path(env['VULKAN_SDK']))
@@ -217,7 +250,7 @@ def scan_host():
 
 def cuda_toolkit(scan, gpu):
     for item in scan.tools.get('cuda', []):
-        if gpu.cc in item['targets']:
+        if gpu.cc in item['targets'] and not item.get('missing'):
             return item
     return None
 
@@ -272,14 +305,26 @@ def run_logged(args, log, env=None, cwd=None, timeout=3600):
                 else:
                     import signal
                     os.killpg(process.pid, signal.SIGTERM)
-                process.wait()
+                try:
+                    process.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+                    process.wait(timeout=5)
                 raise SetupError('編譯逾時；保留原本的引擎，請檢查記錄後重試。')
             time.sleep(.15)
+        if process.returncode in (1641, 3010):
+            raise SetupError('工具安裝已完成，但 Windows 要求重新啟動。請重開機後重新偵測；原有引擎保持不變。')
         if process.returncode != 0:
             raise SetupError(f'工具結束代碼 {process.returncode}。若安裝程式要求重開機，請先重開機再重新偵測。詳細原因請看上方記錄。')
 
 
-def install_tools(scan, gpu, log, runner=run_logged):
+def cuda_install_args(version):
+    # Install only build/runtime components; keep the user's display driver.
+    parts = ('nvcc', 'cudart', 'cublas', 'cublas_dev', 'thrust', 'visual_studio_integration')
+    return '-s -n ' + ' '.join(f'{part}_{version}' for part in parts)
+
+
+def install_tools(scan, gpu, log, runner=run_logged, unattended=False):
     missing = missing_tools(scan, gpu)
     env = scan.tools.get('env') or refreshed_env()
     if any(x.startswith('CMake') for x in missing):
@@ -303,7 +348,9 @@ def install_tools(scan, gpu, log, runner=run_logged):
         elif any(x.startswith('Visual Studio') for x in missing):
             packages.append(('Microsoft.VisualStudio.2022.BuildTools', ['--override', '--wait --norestart --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended']))
         if any(x.startswith('CUDA Toolkit') for x in missing):
-            packages.append(('Nvidia.CUDA', ['--version', cuda_package_version(gpu)]))
+            version = cuda_package_version(gpu)
+            packages.append(('Nvidia.CUDA', ['--version', version, '--force',
+                                             '--override', cuda_install_args(version)]))
         if 'Vulkan SDK' in missing: packages.append(('KhronosGroup.VulkanSDK', []))
         if any(x.startswith('FFmpeg') for x in missing): packages.append(('Gyan.FFmpeg', []))
         if packages and not scan.tools.get('winget'):
@@ -311,7 +358,8 @@ def install_tools(scan, gpu, log, runner=run_logged):
         for package, extra in packages:
             # Source/package terms are displayed in the plan before this user-initiated action.
             runner([scan.tools['winget'], 'install', '--id', package, '--exact', '--source', 'winget',
-                    '--interactive', '--accept-source-agreements', '--accept-package-agreements'] + extra,
+                    '--silent' if unattended or package == 'Nvidia.CUDA' else '--interactive',
+                    '--accept-source-agreements', '--accept-package-agreements'] + extra,
                    log, env=env, timeout=None)
 
 
@@ -323,8 +371,11 @@ def validate_selection(scan, gpu):
     if gpu.blocked: raise SetupError(gpu.blocked)
     if gpu.backend not in (('metal',) if scan.system == 'Darwin' else ('cuda', 'vulkan')):
         raise SetupError('顯卡後端與作業系統不相容。')
-    if gpu.backend == 'cuda' and not re.fullmatch(r'\d{2,3}', gpu.cc):
-        raise SetupError('必須先讀取顯卡實際回報的 CUDA 架構。')
+    if gpu.backend == 'cuda':
+        if not re.fullmatch(r'\d{2,3}', gpu.cc) or int(gpu.cc) < 50:
+            raise SetupError('必須先讀取顯卡實際回報的 CUDA 架構（Maxwell 或更新）。')
+        if not gpu.identity.startswith('GPU-'):
+            raise SetupError('必須先取得 NVIDIA 顯卡識別碼，請更新驅動後重新偵測。')
 
 
 def cmake_command(source, build, scan, gpu):
@@ -336,7 +387,9 @@ def cmake_command(source, build, scan, gpu):
     for backend in ('cuda', 'metal', 'vulkan'):
         cmd.append(f'-DGGML_{backend.upper()}={"ON" if gpu.backend == backend else "OFF"}')
     if scan.system == 'Windows':
-        cmd += ['-G', 'Visual Studio 17 2022', '-A', 'x64', '-DCMAKE_GENERATOR_INSTANCE=' + scan.tools['vs']]
+        manifest = Path(__file__).resolve().parents[2] / 'packaging/windows-runtime.manifest'
+        cmd += ['-G', 'Visual Studio 17 2022', '-A', 'x64', '-DCMAKE_GENERATOR_INSTANCE=' + scan.tools['vs'],
+                f'-DCMAKE_EXE_LINKER_FLAGS=/MANIFEST:EMBED /MANIFESTINPUT:"{manifest}"']
     else:
         cmd += ['-DCMAKE_OSX_ARCHITECTURES=' + scan.machine, '-DGGML_METAL_EMBED_LIBRARY=ON']
     if gpu.backend == 'cuda':

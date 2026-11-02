@@ -29,6 +29,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--native', type=Path, default=ROOT / 'build/native')
     parser.add_argument('--require-gpu', action='store_true')
+    parser.add_argument('--source-runtime', action='store_true')
     args = parser.parse_args()
     native = args.native.resolve()
     suffix = '.exe' if os.name == 'nt' else ''
@@ -40,10 +41,18 @@ def main():
             shutil.copyfileobj(response, output)
     if hashlib.sha256(model.read_bytes()).hexdigest() != MODEL_SHA256:
         raise RuntimeError('Test model checksum mismatch')
-    runtime = json.loads((native / 'runtime.json').read_text())
-    runtime.update(path=str(native / ('whisper-cli' + suffix)), ffmpeg=str(native / ('ffmpeg' + suffix)),
-                   runtime_bins=[str(native)], device_env={})
-    os.environ['PATH'] = str(native) + os.pathsep + os.environ['PATH']
+    if args.source_runtime:
+        from core.gpu_setup import load_runtime, runtime_env
+        runtime = load_runtime(ROOT)
+        if not runtime:
+            raise RuntimeError('Source runtime is missing or invalid')
+        os.environ.update(runtime_env(runtime))
+        runtime['ffmpeg'] = shutil.which('ffmpeg')
+    else:
+        runtime = json.loads((native / 'runtime.json').read_text())
+        runtime.update(path=str(native / ('whisper-cli' + suffix)), ffmpeg=str(native / ('ffmpeg' + suffix)),
+                       runtime_bins=[str(native)], device_env={})
+        os.environ['PATH'] = str(native) + os.pathsep + os.environ['PATH']
     worker = SimpleNamespace(_is_cancelled=False, process=None,
         **{name: Signal() for name in ('progress_update', 'file_finished', 'file_result',
            'all_finished', 'log_message_received', 'subtitle_line_received')})
