@@ -79,6 +79,12 @@ def version_key(value):
     return tuple(int(x) for x in re.findall(r'\d+', str(value)))
 
 
+def cuda_binary_dirs(root):
+    base = Path(root) / 'bin'
+    # CUDA 13 moved runtime DLLs into bin/x64; nvcc remains in bin.
+    return ([str(base / 'x64')] if (base / 'x64').is_dir() else []) + [str(base)]
+
+
 def inspect_cuda(root):
     root = Path(root)
     nvcc = root / 'bin/nvcc.exe'
@@ -88,6 +94,9 @@ def inspect_cuda(root):
     required = ['include/cuda.h', 'include/cuda_runtime.h', 'include/cublas_v2.h',
                 'lib/x64/cudart.lib', 'lib/x64/cublas.lib']
     missing = [name for name in required if not (root / name).is_file()]
+    for pattern in ('cudart64*.dll', 'cublas64*.dll', 'cublasLt64*.dll'):
+        if not any(any(Path(folder).glob(pattern)) for folder in cuda_binary_dirs(root)):
+            missing.append(pattern)
     for pattern in ('CUDA *.props', 'CUDA *.targets', 'Nvda.Build.CudaTasks*.dll'):
         if not any(extensions.glob(pattern)):
             missing.append('Visual Studio integration: ' + pattern)
@@ -461,7 +470,7 @@ def build_gpu(root, scan, gpu, log, install=False, runner=run_logged, scanner=sc
             bins, device_env = [], {}
             if gpu.backend == 'cuda':
                 kit = cuda_toolkit(scan, gpu)
-                bins.append(str(Path(kit['root']) / 'bin'))
+                bins.extend(cuda_binary_dirs(kit['root']))
                 device_env['CUDA_VISIBLE_DEVICES'] = gpu.identity
             elif gpu.backend == 'vulkan':
                 env['VULKAN_SDK'] = scan.tools['vulkan_sdk']

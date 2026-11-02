@@ -35,6 +35,12 @@ class GPUSetupTests(unittest.TestCase):
         self.assertEqual(gs.expand_windows_vars('%unknown%', variables), '%unknown%')
         self.assertGreater(gs.version_key('v13.4'), gs.version_key('v9.2'))
 
+    def test_cuda_13_runtime_dll_directory_is_on_path(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder); (root / 'bin/x64').mkdir(parents=True)
+            self.assertEqual(gs.cuda_binary_dirs(root), [str(root / 'bin/x64'), str(root / 'bin')])
+        self.assertEqual(gs.cuda_binary_dirs('toolkit'), [str(Path('toolkit/bin'))])
+
     def test_partial_toolkit_is_not_ready(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder); (root / 'bin').mkdir(); (root / 'bin/nvcc.exe').touch()
