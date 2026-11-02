@@ -17,16 +17,19 @@ jobs:
         include:
           - os: windows-2022
             platform: windows-x64
+            qt_platform: windows
           - os: macos-15
             platform: macos-arm64
+            qt_platform: offscreen
           - os: macos-15-intel
             platform: macos-x86_64
+            qt_platform: offscreen
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
     env:
       PYTHONUTF8: '1'
       PYTHONDONTWRITEBYTECODE: '1'
-      QT_QPA_PLATFORM: offscreen
+      QT_QPA_PLATFORM: ${{ matrix.qt_platform }}
       PYINSTALLER_CONFIG_DIR: ${{ github.workspace }}/build/pyinstaller-cache
       MACOSX_DEPLOYMENT_TARGET: '12.0'
     steps:

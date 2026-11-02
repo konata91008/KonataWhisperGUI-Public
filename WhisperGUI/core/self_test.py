@@ -17,6 +17,7 @@ def run(report_path):
             os.environ['TJKSUB_DATA_DIR'] = str(Path(temporary) / 'data')
             from PyQt5.QtWidgets import QApplication
             from PyQt5.QtCore import QSettings
+            from PyQt5.QtGui import QFontDatabase
             from PyQt5.QtTest import QTest
             from core.paths import resource_root, data_root, is_packaged, bundled_runtime
             from core.version import VERSION_INFO
@@ -24,6 +25,8 @@ def run(report_path):
             from core.subtitle_diagnostics import repair_srt
             from gui import main_window
             app = QApplication.instance() or QApplication([])
+            assert QFontDatabase().families(), 'The Qt platform has no fonts; text cannot render'
+            checks.append('available-ui-fonts')
             main_window.QSettings = lambda *args: QSettings(str(Path(temporary) / 'settings.ini'), QSettings.IniFormat)
             gui = main_window.WhisperGUI()
             gui.show()
