@@ -20,7 +20,7 @@ def data_root():
     if not is_packaged():
         return resource_root() / 'whisper.cpp'
     if sys.platform == 'win32':
-        return Path(os.environ.get('LOCALAPPDATA', Path.home() / 'AppData/Local')) / 'TJKSub'
+        return Path(os.environ.get('LOCALAPPDATA') or Path.home() / 'AppData/Local') / 'TJKSub'
     if sys.platform == 'darwin':
         return Path.home() / 'Library/Application Support/TJKSub'
     return Path(os.environ.get('XDG_DATA_HOME', Path.home() / '.local/share')) / 'TJKSub'

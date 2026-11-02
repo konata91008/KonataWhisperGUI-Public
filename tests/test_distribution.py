@@ -26,11 +26,13 @@ class DistributionTests(unittest.TestCase):
 
     def test_packaged_data_is_outside_readonly_resources(self):
         with tempfile.TemporaryDirectory() as folder, patch.object(sys, 'frozen', True, create=True), \
-                patch.object(sys, '_MEIPASS', folder, create=True), patch.dict(os.environ, {}, clear=True):
+                patch.object(sys, '_MEIPASS', folder, create=True), \
+                patch.dict(os.environ, {'USERPROFILE': folder, 'HOME': folder}, clear=True):
             self.assertEqual(paths.resource_root(), Path(folder))
             self.assertNotEqual(paths.data_root(), paths.resource_root())
             with patch.object(sys, 'platform', 'win32'), patch.dict(os.environ, {'LOCALAPPDATA': folder}):
-                self.assertEqual(paths.data_root(), Path(folder) / 'TJKSub')
+                with patch.object(Path, 'home', side_effect=RuntimeError('No home directory')):
+                    self.assertEqual(paths.data_root(), Path(folder) / 'TJKSub')
 
     def test_explicit_data_override_and_restart_do_not_require_python(self):
         with tempfile.TemporaryDirectory() as folder, patch.dict(os.environ, {'TJKSUB_DATA_DIR': folder}), \
