@@ -11,7 +11,7 @@ The distribution includes the following independently licensed components:
 | --- | --- | --- | --- |
 | CPython | 3.12 | PSF License | https://www.python.org/downloads/source/ |
 | PyQt5 | 5.15.11 | GPLv3 | https://pypi.org/project/PyQt5/5.15.11/#files |
-| Qt | 5.15.19 | LGPLv3 / GPLv3 and component licenses | https://download.qt.io/archive/qt/5.15/5.15.19/ |
+| Qt | 5.15.19 (macOS), 5.15.2 (Windows) | LGPLv3 / GPLv3 and component licenses | https://download.qt.io/archive/qt/5.15/5.15.19/ ; https://download.qt.io/archive/qt/5.15/5.15.2/ |
 | PyQt5-sip | 12.20.0 | BSD-2-Clause | https://pypi.org/project/PyQt5-sip/12.20.0/#files |
 | OpenCC Python reimplementation | 0.1.7 | Apache-2.0 | https://pypi.org/project/opencc-python-reimplemented/0.1.7/#files |
 | certifi | 2026.10.23 | MPL-2.0 | https://pypi.org/project/certifi/2026.10.23/#files |
