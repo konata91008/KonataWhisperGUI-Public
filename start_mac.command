@@ -44,7 +44,7 @@ fi
 # 3. venv 存在但套件不齊時，自動補裝
 if ! "$DIR/venv/bin/python" -c "from PyQt5 import QtWidgets, QtSvg; import certifi; from opencc import OpenCC; assert OpenCC('t2s').convert('繁體') == '繁体'" >/dev/null 2>&1; then
     echo "正在補齊圖形介面、繁簡轉換與 HTTPS 所需套件..."
-    "$DIR/venv/bin/python" -m pip install -r "$DIR/requirements.txt" || fail "安裝套件失敗，請檢查網路連線"
+    "$DIR/venv/bin/python" -m pip install --force-reinstall -r "$DIR/requirements.txt" || fail "安裝套件失敗，請檢查網路連線"
 fi
 
 # 4. 啟動（直接用 venv 的 python，不依賴 activate）

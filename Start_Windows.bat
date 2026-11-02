@@ -33,7 +33,7 @@ if errorlevel 1 goto failure
 :check_packages
 "venv\Scripts\python.exe" -c "from PyQt5 import QtWidgets, QtSvg; import certifi; from opencc import OpenCC; assert OpenCC('t2s').convert('繁體') == '繁体'" >nul 2>&1
 if not errorlevel 1 goto run_app
-"venv\Scripts\python.exe" -m pip install -r requirements.txt
+"venv\Scripts\python.exe" -m pip install --force-reinstall -r requirements.txt
 if errorlevel 1 goto failure
 
 :run_app

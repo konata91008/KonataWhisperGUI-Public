@@ -346,7 +346,7 @@ def install_tools(scan, gpu, log, runner=run_logged, unattended=False):
                     '--add', ('Microsoft.VisualStudio.Workload.VCTools' if 'buildtools' in scan.tools.get('vs_product', '').lower() else 'Microsoft.VisualStudio.Workload.NativeDesktop'), '--includeRecommended',
                     '--passive', '--norestart'], log, env=env, timeout=None)
         elif any(x.startswith('Visual Studio') for x in missing):
-            packages.append(('Microsoft.VisualStudio.2022.BuildTools', ['--override', '--wait --norestart --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended']))
+            packages.append(('Microsoft.VisualStudio.2022.BuildTools', ['--override', '--wait --passive --norestart --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended']))
         if any(x.startswith('CUDA Toolkit') for x in missing):
             version = cuda_package_version(gpu)
             packages.append(('Nvidia.CUDA', ['--version', version, '--force',

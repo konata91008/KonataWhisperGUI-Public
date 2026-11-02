@@ -161,7 +161,8 @@ class DiagnosticGUITests(unittest.TestCase):
         self.settings_patch.start()
         self.network_patch = patch('core.subtitle_ai.ChatClient.complete', side_effect=AssertionError('No API allowed'))
         self.network_patch.start()
-        self.window = WhisperGUI()
+        with patch('gui.main_window.load_runtime', return_value=None):
+            self.window = WhisperGUI()
         self.window.show()
         self.window.mainTabs.setCurrentIndex(2)
         self.tab = self.window.diagnosticsTab

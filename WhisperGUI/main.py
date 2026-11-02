@@ -3,7 +3,15 @@ import hashlib
 import tempfile
 from pathlib import Path
 from PyQt5.QtWidgets import QApplication, QMessageBox
-from PyQt5.QtCore import QLockFile, QTimer
+from PyQt5.QtCore import QLockFile, QTimer, QCoreApplication
+
+# PyQt5 wheel qt.conf paths can be misread when a source venv has Unicode
+# characters. Pass the actual Python package path through Qt's Unicode API.
+if not getattr(sys, 'frozen', False):
+    import PyQt5
+    plugins = Path(PyQt5.__file__).resolve().parent / 'Qt5/plugins'
+    if plugins.is_dir():
+        QCoreApplication.addLibraryPath(str(plugins))
 # A packaged smoke test exercises the real executable while isolating all
 # settings/model writes in a temporary directory.
 if __name__ == '__main__' and '--self-test' in sys.argv:

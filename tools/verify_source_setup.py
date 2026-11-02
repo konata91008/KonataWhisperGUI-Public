@@ -16,8 +16,15 @@ def main():
     parser.add_argument('--backend', choices=['cuda', 'metal', 'vulkan'], required=True)
     parser.add_argument('--install-tools', action='store_true')
     parser.add_argument('--ci-cuda-cc', choices=['61', '86', '120', '121'])
+    parser.add_argument('--ci-install-vs', action='store_true')
+    parser.add_argument('--ci-compile-only', action='store_true')
     args = parser.parse_args()
-    if args.ci_cuda_cc and (os.environ.get('GITHUB_ACTIONS') != 'true' or args.backend != 'cuda'):
+    if args.ci_install_vs and not args.ci_cuda_cc:
+        parser.error('--ci-install-vs requires the CUDA CI fixture')
+    ci_fixture = bool(args.ci_cuda_cc or args.ci_compile_only)
+    if ci_fixture and os.environ.get('GITHUB_ACTIONS') != 'true':
+        parser.error('Compiler-only fixtures are restricted to GitHub Actions')
+    if args.ci_cuda_cc and args.backend != 'cuda':
         parser.error('--ci-cuda-cc is only a GPU-less GitHub Actions compiler test')
     scan = scan_host()
     if args.ci_cuda_cc:
@@ -26,6 +33,17 @@ def main():
         scan.tools['cuda'] = []
         scan.tools['cmake'] = None
         scan.tools['ffmpeg'] = None
+        if args.ci_install_vs:
+            scan.tools.update(vs='', vs_any='', windows_sdk=False)
+    elif args.ci_compile_only:
+        if args.backend == 'cuda':
+            parser.error('CUDA compiler tests require --ci-cuda-cc')
+        gpu = GPU('CI compiler target (no physical GPU)', args.backend,
+                  'system-default' if args.backend == 'metal' else '0')
+        scan.tools['cmake'] = None
+        if args.backend == 'vulkan':
+            scan.tools['vulkan_sdk'] = ''
+            scan.tools['ffmpeg'] = None
     else:
         devices = [g for g in scan.gpus if g.backend == args.backend and not g.blocked]
         if not devices: raise RuntimeError('No verified GPU available for requested backend')
@@ -36,18 +54,18 @@ def main():
         def log(message):
             print(message, flush=True); output.write(message + '\n'); output.flush()
         if args.install_tools:
-            install_tools(scan, gpu, log, unattended=bool(args.ci_cuda_cc))
+            install_tools(scan, gpu, log, unattended=ci_fixture)
             scan = scan_host()
         runtime = build_gpu(ROOT, scan, gpu, log)
     env = runtime_env(runtime)
     command = [sys.executable, str(ROOT / 'packaging/smoke_transcription.py'), '--source-runtime']
-    if not args.ci_cuda_cc:
+    if not ci_fixture:
         command.append('--require-gpu')
     subprocess.run(command, check=True, env=env)
     report = {'ok': True, 'backend': args.backend, 'compute_capability': gpu.cc,
-              'compiled': True, 'launchable': True, 'gpu_execution_verified': not bool(args.ci_cuda_cc),
+              'compiled': True, 'launchable': True, 'gpu_execution_verified': not ci_fixture,
               'install_requested': args.install_tools, 'unicode_paths': True,
-              'note': 'CI has no NVIDIA GPU; transcription explicitly uses CPU.' if args.ci_cuda_cc else 'Real GPU transcription passed.'}
+              'note': 'CI does not verify physical GPU execution; transcription explicitly uses CPU.' if ci_fixture else 'Real GPU transcription passed.'}
     (ROOT / 'build/source-setup.json').write_text(json.dumps(report, indent=2), encoding='utf-8')
     print(json.dumps(report))
 

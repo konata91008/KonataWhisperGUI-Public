@@ -65,7 +65,8 @@ class ConversionGUITests(unittest.TestCase):
 
     def setUp(self):
         QSettings(self.settings_file, QSettings.IniFormat).clear()
-        self.window = WhisperGUI()
+        with patch('gui.main_window.load_runtime', return_value=None):
+            self.window = WhisperGUI()
         self.window.show()
         self.tab = self.window.conversionTab
         self.window.mainTabs.setCurrentIndex(1)

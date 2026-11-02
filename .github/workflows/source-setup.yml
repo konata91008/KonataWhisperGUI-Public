@@ -23,7 +23,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        cc: ['61', '121']
+        include:
+          - cc: '61'
+            extra: '--ci-install-vs'
+          - cc: '121'
+            extra: ''
     env:
       PYTHONUTF8: '1'
       QT_QPA_PLATFORM: windows
@@ -36,6 +40,7 @@ jobs:
           python-version: '3.12'
       - name: Bootstrap official WinGet client on the ephemeral runner
         shell: powershell
+        timeout-minutes: 10
         run: |
           Install-PackageProvider -Name NuGet -Force | Out-Null
           Install-Module -Name Microsoft.WinGet.Client -Force -Repository PSGallery
@@ -50,12 +55,75 @@ jobs:
       - name: Regression tests in the launcher-created environment
         run: venv/Scripts/python.exe -m unittest discover -s tests -v
       - name: Install CUDA and FFmpeg, compile selected architecture, test exports
-        run: venv/Scripts/python.exe tools/verify_source_setup.py --backend cuda --install-tools --ci-cuda-cc ${{ matrix.cc }}
+        run: venv/Scripts/python.exe tools/verify_source_setup.py --backend cuda --install-tools --ci-cuda-cc ${{ matrix.cc }} ${{ matrix.extra }}
       - name: Attach evidence (no NVIDIA hardware on this runner)
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: source-cuda-sm${{ matrix.cc }}
+          path: |
+            build/*.json
+            build/*.log
+            whisper.cpp/build/tjksub-runtime.json
+            whisper.cpp/build/tjksub/**/CMakeFiles/CMakeConfigureLog.yaml
+          if-no-files-found: warn
+
+  source-other:
+    name: Source ${{ matrix.platform }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-2022
+            platform: windows-vulkan
+            backend: vulkan
+            python: venv/Scripts/python.exe
+            qt: windows
+          - os: macos-15
+            platform: macos-arm64
+            backend: metal
+            python: venv/bin/python
+            qt: offscreen
+          - os: macos-15-intel
+            platform: macos-intel
+            backend: metal
+            python: venv/bin/python
+            qt: offscreen
+    env:
+      PYTHONUTF8: '1'
+      QT_QPA_PLATFORM: ${{ matrix.qt }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.12'
+      - name: Prepare WinGet on ephemeral Windows runner
+        if: runner.os == 'Windows'
+        shell: powershell
+        timeout-minutes: 10
+        run: |
+          Install-PackageProvider -Name NuGet -Force | Out-Null
+          Install-Module -Name Microsoft.WinGet.Client -Force -Repository PSGallery
+          Repair-WinGetPackageManager -AllUsers
+          $env:LOCALAPPDATA + '\Microsoft\WindowsApps' | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+      - name: Windows source launcher
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: call tools\setup_windows.bat --self-test build/setup-launcher-smoke.json
+      - name: macOS source launcher
+        if: runner.os == 'macOS'
+        run: bash tools/setup_mac.command --self-test build/setup-launcher-smoke.json
+      - name: Source dependency installation, compilation and exports
+        run: ${{ matrix.python }} tools/verify_source_setup.py --backend ${{ matrix.backend }} --install-tools --ci-compile-only
+      - name: Attach source verification evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: source-${{ matrix.platform }}
           path: |
             build/*.json
             build/*.log
