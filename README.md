@@ -2,7 +2,7 @@
 
 支援 macOS 與 Windows 的 whisper.cpp 語音轉錄介面，提供秋日暖色主題、字幕匯出、語言轉換、字幕排錯、GPU 設定與選用的 AI 字幕優化。
 
-原始碼版本：**v4.13.1 · 2026-11-02**（目前安裝包仍為 v4.13.0）
+目前版本：**v4.13.2 · 2026-11-02**
 
 版本變更請見 [版本紀錄](CHANGELOG.md)。
 
@@ -12,9 +12,9 @@
 
 | 系統 | 下載檔案 | 安裝方式 |
 | --- | --- | --- |
-| Windows 10 1903 以上／11 x64 | `TJKSub-4.13.0-windows-x64-setup.exe` | 執行安裝程式，安裝至目前使用者帳戶 |
-| Mac Apple Silicon（M 系列） | `TJKSub-4.13.0-macos-arm64.dmg` | 開啟後把 TJKSub 拖進 Applications |
-| Mac Intel | `TJKSub-4.13.0-macos-x86_64.dmg` | 開啟後把 TJKSub 拖進 Applications |
+| Windows 10 1903 以上／11 x64 | `TJKSub-4.13.2-windows-x64-setup.exe` | 執行安裝程式，安裝至目前使用者帳戶 |
+| Mac Apple Silicon（M 系列） | `TJKSub-4.13.2-macos-arm64.dmg` | 開啟後把 TJKSub 拖進 Applications |
+| Mac Intel | `TJKSub-4.13.2-macos-x86_64.dmg` | 開啟後把 TJKSub 拖進 Applications |
 
 Mac 需求為 macOS 12 以上及可用的 Metal GPU。Windows 需求為 x64 處理器、支援 Vulkan 的 GPU 與原廠驅動；Windows ARM 尚未支援。另提供 Windows portable ZIP 與 Mac app ZIP。
 

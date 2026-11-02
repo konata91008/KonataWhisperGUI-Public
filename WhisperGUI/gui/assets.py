@@ -323,6 +323,9 @@ QTabWidget::pane {
     background-color: {BG_TERTIARY};
     top: 4px;
 }
+/* Fonts belong to QTabBar itself so Qt measures and paints the same glyphs.
+   Font overrides on ::tab can clip labels on Windows (and selected tabs). */
+QTabBar { font-size: 12px; font-weight: 500; }
 QTabBar::tab {
     background-color: {BG_SECONDARY};
     color: {TEXT_SECONDARY};
@@ -330,13 +333,10 @@ QTabBar::tab {
     border-top-left-radius: 10px;
     border-top-right-radius: 10px;
     margin-right: 4px;
-    font-size: 12px;
-    font-weight: 500;
 }
 QTabBar::tab:selected {
     background-color: {ACCENT};
     color: {ON_ACCENT};
-    font-weight: 600;
 }
 QTabBar::tab:hover:!selected {
     background-color: {BG_TERTIARY};
@@ -389,12 +389,13 @@ QFrame#ToolbarCard {
     background: {SURFACE_ALT}; border: 1px solid {BORDER_PRIMARY}; border-radius: 12px;
 }
 #MainTabs::pane { border: none; background: transparent; top: 0px; }
+#MainTabBar { font-size: 14px; font-weight: 600; }
 #MainTabBar::tab {
     border: 1px solid transparent; border-radius: 10px;
     padding: 10px 22px; margin-right: 8px; margin-bottom: 12px;
-    background: transparent; color: {TEXT_SECONDARY}; font-size: 14px;
+    background: transparent; color: {TEXT_SECONDARY};
 }
-#MainTabBar::tab:selected { background: {ACCENT}; color: {ON_ACCENT}; font-weight: 600; }
+#MainTabBar::tab:selected { background: {ACCENT}; color: {ON_ACCENT}; }
 #MainTabBar::tab:hover:!selected { background: {BG_SECONDARY}; }
 #MainTabBar::tab:focus { border-color: {BORDER_SECONDARY}; }
 #ToolbarButton, #SettingsButton, #CloseButton {
