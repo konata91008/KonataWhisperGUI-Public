@@ -37,7 +37,7 @@ def prepare():
     shutil.copy2(ROOT / 'packaging/THIRD_PARTY_NOTICES.md', licenses)
     if sys.platform == 'win32':
         shutil.copy2(ROOT / 'packaging/licenses/Vulkan-Loader-LICENSE.txt', licenses)
-    for name in ('PyQt5-Qt5', 'PyQt5-sip', 'opencc-python-reimplemented', 'certifi', 'pyinstaller'):
+    for name in ('PyQt5-Qt5', 'PyQt5-sip', 'opencc-python-reimplemented', 'certifi', 'charset-normalizer', 'pyinstaller'):
         package = distribution(name)
         for entry in package.files or ():
             if entry.name.lower().startswith(('license', 'copying', 'copyright')):

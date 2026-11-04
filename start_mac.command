@@ -42,7 +42,7 @@ if ! "$DIR/venv/bin/python" -c "import sys; assert (3,10) <= sys.version_info[:2
 fi
 
 # 3. venv 存在但套件不齊時，自動補裝
-if ! "$DIR/venv/bin/python" -c "from PyQt5 import QtWidgets, QtSvg; import certifi; from opencc import OpenCC; assert OpenCC('t2s').convert('繁體') == '繁体'" >/dev/null 2>&1; then
+if ! "$DIR/venv/bin/python" -c "from PyQt5 import QtWidgets, QtSvg; import certifi; from charset_normalizer import from_bytes; assert from_bytes(b'test').best() is not None; from opencc import OpenCC; assert OpenCC('t2s').convert('繁體') == '繁体'" >/dev/null 2>&1; then
     echo "正在補齊圖形介面、繁簡轉換與 HTTPS 所需套件..."
     "$DIR/venv/bin/python" -m pip install --force-reinstall -r "$DIR/requirements.txt" || fail "安裝套件失敗，請檢查網路連線"
 fi

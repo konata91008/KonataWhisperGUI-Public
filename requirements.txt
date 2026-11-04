@@ -21,6 +21,9 @@ PyQt5-Qt5>=5.15.2,<5.16
 # 用於「語言轉換」分頁：t2s（繁轉簡）／s2t（簡轉繁），完全離線執行。
 opencc-python-reimplemented==0.1.7
 
+# Offline subtitle encoding detection
+charset-normalizer==3.5.1
+
 # HTTPS trust store for packaged model downloads and API requests
 certifi>=2026.10.23
 

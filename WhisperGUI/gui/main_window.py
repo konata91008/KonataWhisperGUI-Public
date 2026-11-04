@@ -26,6 +26,7 @@ from core.update_translations import update_strings
 from .update_dialog import UpdateDialog
 from .conversion_tab import ConversionTab
 from .diagnostics_tab import DiagnosticsTab
+from .encoding_tab import EncodingTab
 from .studio_widgets import BrandMark, MediaFileList
 from core.interface_translations import interface_strings
 from core.conversion_translations import conversion_strings
@@ -346,6 +347,7 @@ class WhisperGUI(QWidget):
         transcription_layout.addLayout(transcription_actions)
         self.conversionTab = ConversionTab(self)
         self.diagnosticsTab = DiagnosticsTab(self)
+        self.encodingTab = EncodingTab(self)
         self.mainTabs = QTabWidget(objectName='MainTabs')
         self.mainTabs.tabBar().setObjectName('MainTabBar')
         self.mainTabs.tabBar().setDrawBase(False)
@@ -355,6 +357,7 @@ class WhisperGUI(QWidget):
         self.mainTabs.addTab(self.transcriptionPage, '')
         self.mainTabs.addTab(self.conversionTab, '')
         self.mainTabs.addTab(self.diagnosticsTab, '')
+        self.mainTabs.addTab(self.encodingTab, '')
 
         content_inner_layout = QVBoxLayout()
         content_inner_layout.setContentsMargins(26, 24, 26, 24)
@@ -464,6 +467,8 @@ class WhisperGUI(QWidget):
         self.conversionTab.retranslate_ui(self.current_lang)
         self.diagnosticsTab.retranslate_ui(self.current_lang)
         self.mainTabs.setTabText(2, self.diagnosticsTab.t['tab'])
+        self.encodingTab.retranslate_ui(self.current_lang)
+        self.mainTabs.setTabText(3, self.encodingTab.t['tab'])
         updates = update_strings(self.current_lang)
         self.settingsButton.setToolTip(updates['settings'])
         self.settingsButton.setAccessibleName(updates['settings'])
@@ -846,7 +851,7 @@ class WhisperGUI(QWidget):
         self.conversionTab.refresh_service()
 
     def open_api_settings(self):
-        if self.conversionTab.is_busy() or self.diagnosticsTab.is_busy():
+        if self.conversionTab.is_busy() or self.diagnosticsTab.is_busy() or self.encodingTab.is_busy():
             return
         from .ai_dialog import APISettingsDialog
         dialog = APISettingsDialog(self)
@@ -875,7 +880,7 @@ class WhisperGUI(QWidget):
             dialog.exec_()
             dialog.deleteLater()
             return
-        if self.conversionTab.is_busy() or self.diagnosticsTab.is_busy(): return
+        if self.conversionTab.is_busy() or self.diagnosticsTab.is_busy() or self.encodingTab.is_busy(): return
         if self.setup_dialog and self.setup_dialog.is_busy(): return
         if self.is_downloading or (self.worker and self.worker.isRunning()):
             strings = update_strings(self.current_lang)
@@ -893,7 +898,7 @@ class WhisperGUI(QWidget):
             self.update_dialog.check()
 
     def restart_application(self):
-        if self.conversionTab.is_busy() or self.diagnosticsTab.is_busy(): return
+        if self.conversionTab.is_busy() or self.diagnosticsTab.is_busy() or self.encodingTab.is_busy(): return
         if self.setup_dialog and self.setup_dialog.is_busy(): return
         if (self.worker and self.worker.isRunning()) or self.is_downloading:
             return
@@ -910,7 +915,7 @@ class WhisperGUI(QWidget):
         QApplication.instance().quit()
 
     def closeEvent(self, event):
-        if self.conversionTab.is_busy() or self.diagnosticsTab.is_busy():
+        if self.conversionTab.is_busy() or self.diagnosticsTab.is_busy() or self.encodingTab.is_busy():
             event.ignore()
             return
         if self.setup_dialog and self.setup_dialog.is_busy():

@@ -94,7 +94,7 @@ class ConversionGUITests(unittest.TestCase):
         return self.tab.resultEdit.toPlainText()
 
     def test_tabs_work_without_gpu_and_existing_controls_remain(self):
-        self.assertEqual(self.window.mainTabs.count(), 3)
+        self.assertEqual(self.window.mainTabs.count(), 4)
         self.assertIsNone(self.window.gpu_runtime)
         self.assertTrue(self.tab.isVisible())
         self.assertFalse(self.window.btnStart.isVisible())

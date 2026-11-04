@@ -1,4 +1,4 @@
-TJKSub v4.13.2 — Windows / macOS
+TJKSub v4.14.0 — Windows / macOS
 
 Windows 10 version 1903 or later / Windows 11 x64: run the setup.exe installer. No administrator permission is required.
 A portable ZIP is also available: extract the entire folder before running TJKSub.exe.

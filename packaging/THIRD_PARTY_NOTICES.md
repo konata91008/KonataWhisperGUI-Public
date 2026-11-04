@@ -15,6 +15,7 @@ The distribution includes the following independently licensed components:
 | PyQt5-sip | 12.20.0 | BSD-2-Clause | https://pypi.org/project/PyQt5-sip/12.20.0/#files |
 | OpenCC Python reimplementation | 0.1.7 | Apache-2.0 | https://pypi.org/project/opencc-python-reimplemented/0.1.7/#files |
 | certifi | 2026.10.23 | MPL-2.0 | https://pypi.org/project/certifi/2026.10.23/#files |
+| charset-normalizer | 3.5.1 | MIT | https://pypi.org/project/charset-normalizer/3.5.1/#files |
 | whisper.cpp / ggml | vendored source in matching TJKSub tag | MIT and included component licenses | https://github.com/konata91008/KonataWhisperGUI-Public/tree/main/whisper.cpp |
 | FFmpeg | 9.0.2 | LGPL-2.1-or-later; no GPL/nonfree components enabled | `ffmpeg-9.0.2.tar.xz` attached to the same GitHub release |
 | Vulkan loader (Windows) | SDK 1.4.363.0 | Apache-2.0 | https://github.com/KhronosGroup/Vulkan-Loader/tree/vulkan-sdk-1.4.363.0 |

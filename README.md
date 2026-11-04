@@ -1,8 +1,8 @@
 # TJKSub / KonataWhisperGUI
 
-支援 macOS 與 Windows 的 whisper.cpp 語音轉錄介面，提供秋日暖色主題、字幕匯出、語言轉換、字幕排錯、GPU 設定與選用的 AI 字幕優化。
+支援 macOS 與 Windows 的 whisper.cpp 語音轉錄介面，提供秋日暖色主題、字幕匯出、語言轉換、字幕排錯、字幕轉碼、GPU 設定與選用的 AI 字幕優化。
 
-目前版本：**v4.13.2 · 2026-11-02**
+目前版本：**v4.14.0 · 2026-11-04**
 
 版本變更請見 [版本紀錄](CHANGELOG.md)。
 
@@ -12,13 +12,13 @@
 
 | 系統 | 下載檔案 | 安裝方式 |
 | --- | --- | --- |
-| Windows 10 1903 以上／11 x64 | `TJKSub-4.13.2-windows-x64-setup.exe` | 執行安裝程式，安裝至目前使用者帳戶 |
-| Mac Apple Silicon（M 系列） | `TJKSub-4.13.2-macos-arm64.dmg` | 開啟後把 TJKSub 拖進 Applications |
-| Mac Intel | `TJKSub-4.13.2-macos-x86_64.dmg` | 開啟後把 TJKSub 拖進 Applications |
+| Windows 10 1903 以上／11 x64 | `TJKSub-4.14.0-windows-x64-setup.exe` | 執行安裝程式，安裝至目前使用者帳戶 |
+| Mac Apple Silicon（M 系列） | `TJKSub-4.14.0-macos-arm64.dmg` | 開啟後把 TJKSub 拖進 Applications |
+| Mac Intel | `TJKSub-4.14.0-macos-x86_64.dmg` | 開啟後把 TJKSub 拖進 Applications |
 
 Mac 需求為 macOS 12 以上及可用的 Metal GPU。Windows 需求為 x64 處理器、支援 Vulkan 的 GPU 與原廠驅動；Windows ARM 尚未支援。另提供 Windows portable ZIP 與 Mac app ZIP。
 
-安裝版已包含 Python、Qt、whisper.cpp、FFmpeg 與繁簡轉換字典，不需自行安裝開發工具。語音轉錄首次使用仍需下載模型；模型不隨安裝包附送。繁簡轉換與字幕排錯可以離線使用；跨語言翻譯需自行設定 API。
+安裝版已包含 Python、Qt、whisper.cpp、FFmpeg 與繁簡轉換字典，不需自行安裝開發工具。語音轉錄首次使用仍需下載模型；模型不隨安裝包附送。繁簡轉換、字幕排錯與字幕轉碼可以離線使用；跨語言翻譯需自行設定 API。
 
 目前 Windows 程式未購買程式碼簽章，Mac 使用 ad hoc 簽章、尚未經 Developer ID 簽署及 Apple 公證，因此首次開啟可能出現系統警告或被阻擋。請確認檔案來自本專案 Release 並比對 SHA256；Mac 若提供「隱私權與安全性 → 強制打開」可依系統提示操作。不需要全域關閉系統安全功能。詳見 [安裝說明](packaging/INSTALL.md)。
 
@@ -40,7 +40,7 @@ Mac 需求為 macOS 12 以上及可用的 Metal GPU。Windows 需求為 x64 處�
    | macOS | `start_mac.command` |
    | Windows | `Start_Windows.bat` |
 
-首次啟動會準備 Python 環境及套件，再開啟主視窗。「語言轉換」中的繁簡模式及「字幕排錯」可直接使用；需要語音轉錄時，請從齒輪開啟「顯卡與引擎設定」，確認偵測結果後，依視窗指示安裝工具並編譯引擎，接著下載所需模型。
+首次啟動會準備 Python 環境及套件，再開啟主視窗。「語言轉換」中的繁簡模式、「字幕排錯」及「字幕轉碼」可直接使用；需要語音轉錄時，請從齒輪開啟「顯卡與引擎設定」，確認偵測結果後，依視窗指示安裝工具並編譯引擎，接著下載所需模型。
 
 這是**原始碼發行版**，不含預先編譯的引擎、模型或系統驅動。首次設定需要網路、儲存空間與編譯時間；工具安裝可能需要系統管理員權限。
 
@@ -92,7 +92,16 @@ Mac Apple Silicon 已完成 Metal 實際音訊轉錄與 SRT／TXT 匯出測試�
 
 格式依據參考 [美國國會圖書館的 SRT 說明](https://www.loc.gov/preservation/digital/formats/fdd/fdd000569.shtml)。字幕只匯入一部分，也可能與多餘換行或時間安排有關，見 [Simon Says 的匯入排錯說明](https://www.simonsaysai.com/help/5072306-srt-subtitle-file-does-not-import-troubleshooting)。
 
-自動驗證涵蓋 50 項功能測試與四語／深淺色／三分頁的 24 種小視窗組合。SRT 尚未在 Premiere 或其他剪輯軟體實機匯入驗證。API 翻譯與優化使用模擬服務測試，未向付費 API 發送測試內容。
+自動驗證涵蓋 92 項功能測試與四語／深淺色／四分頁的 32 種小視窗組合，並產生 100%／125%／150%／200% 縮放截圖。SRT 尚未在 Premiere 或其他剪輯軟體實機匯入驗證。API 翻譯與優化使用模擬服務測試，未向付費 API 發送測試內容。
+
+## 字幕轉碼（離線 UTF-8）
+
+1. 開啟新的「字幕轉碼」分頁，按「匯入字幕」，選擇 SRT、ASS、SSA、VTT、SBV、文字型 SUB 或 TXT。
+2. 程式優先辨識 Unicode BOM 與有效 UTF-8，再推測其他編碼。預覽有亂碼時，手動切換「原始編碼」：繁中 Windows 常用 Big5／Windows-950，簡中常用 GBK／GB18030；另支援日韓文、歐洲語系與 UTF-16／32。
+3. 確認預覽文字正確並勾選確認，按「另存 UTF-8」。預設不含 BOM；若剪輯軟體要求 BOM，可切換輸出選項。
+4. 預設另存為 `原檔名_utf8.原副檔名`；原始檔與其連結均禁止覆蓋。保留文字、時間碼、標記、原始換行與結尾空白，不經過字幕重新排版。
+
+ANSI 並非單一編碼，自動判讀只是推測，尤其短字幕仍需人工確認。錯誤解碼不會略過或替換字元；若原檔已經將文字存成問號或 `�`，需找回未損壞的來源，轉碼無法復原。每檔上限 20 MiB，預覽最多顯示前 100,000 個字元，儲存會輸出完整內容。圖片型 SUB 等二進位字幕需先做 OCR；這裡不會轉換字幕格式或修正時間軸。
 
 ## 字幕與 AI 優化
 

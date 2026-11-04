@@ -5,6 +5,7 @@ import tempfile
 import time
 import traceback
 from pathlib import Path
+from unittest.mock import patch
 
 
 def run(report_path):
@@ -31,10 +32,10 @@ def run(report_path):
             gui = main_window.WhisperGUI()
             gui.show()
             app.processEvents()
-            assert gui.mainTabs.count() == 3
+            assert gui.mainTabs.count() == 4
             assert gui.brandMark.renderer.isValid()
             assert data_root().is_relative_to(Path(temporary).resolve())
-            checks.extend(['three-tabs', 'svg-logo', 'isolated-user-data'])
+            checks.extend(['four-tabs', 'svg-logo', 'isolated-user-data'])
             tab = gui.conversionTab
             gui.mainTabs.setCurrentIndex(1)
             tab.sourceEdit.setPlainText('繁體中文：頭髮與發展。')
@@ -49,6 +50,28 @@ def run(report_path):
             fixed = repair_srt(subtitle, trim_overlaps=True)
             assert '00:00:02,999' in fixed.text and not fixed.checked.issues
             checks.append('subtitle-repair')
+            encoding_tab = gui.encodingTab
+            encoding_source = Path(temporary) / '繁體字幕.srt'
+            encoding_text = '1\r\n00:00:01,000 --> 00:00:03,000\r\n這是一段繁體中文字幕，讓電腦能夠正常顯示所有文字。\r\n\r\n'
+            encoding_source.write_bytes(encoding_text.encode('cp950'))
+            encoding_tab.load_path(encoding_source)
+            deadline = time.monotonic() + 20
+            while encoding_tab.is_busy() and time.monotonic() < deadline:
+                QTest.qWait(10)
+            assert not encoding_tab.is_busy() and encoding_tab.result is not None
+            assert encoding_tab.result.text == encoding_text
+            assert not encoding_tab.saveButton.isEnabled()
+            encoding_tab.confirmCheck.setChecked(True)
+            encoding_output = Path(temporary) / '繁體字幕_utf8.srt'
+            with patch('gui.encoding_tab.QFileDialog.getSaveFileName', return_value=(str(encoding_output), '')):
+                encoding_tab.save_utf8()
+            assert encoding_output.read_bytes() == encoding_text.encode('utf-8')
+            assert encoding_source.read_bytes() == encoding_text.encode('cp950')
+            from core.subtitle_encoding import ENCODINGS, decode_subtitle
+            for codec in ENCODINGS:
+                # Exercise dynamic Python codecs inside the frozen application too.
+                assert decode_subtitle('Subtitle\r\n'.encode(codec), codec).text == 'Subtitle\r\n'
+            checks.append('subtitle-encoding-detection-and-utf8-export')
             assert len(ssl_context().get_ca_certs()) > 0
             checks.append('https-trust-store')
             if is_packaged():
@@ -63,11 +86,11 @@ def run(report_path):
                     gui.update_theme()
                     gui.resize(860, 695)
                     app.processEvents()
-                    for page in range(3):
+                    for page in range(gui.mainTabs.count()):
                         gui.mainTabs.setCurrentIndex(page)
                         app.processEvents()
                         assert gui.mainTabs.currentWidget().isVisible()
-            checks.append('four-locales-two-themes-three-tabs')
+            checks.append('four-locales-two-themes-four-tabs')
             gui.change_language('zh_TW')
             gui.resize(1040, 800)
             gui.grab().save(str(report_path.with_suffix('.png')))
