@@ -189,7 +189,8 @@ class FileDropTests(unittest.TestCase):
         with patch.object(self.window, 'add_files') as add:
             self.assertTrue(self.enter(self.window, mime).isAccepted())
             self.drop(self.window, mime)
-            add.assert_called_once_with([str(self.source)])
+            add.assert_called_once()
+            self.assertEqual([Path(path).resolve() for path in add.call_args.args[0]], [self.source.resolve()])
 
 
 if __name__ == '__main__':
