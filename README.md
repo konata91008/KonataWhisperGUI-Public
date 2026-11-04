@@ -2,7 +2,7 @@
 
 支援 macOS 與 Windows 的 whisper.cpp 語音轉錄介面，提供秋日暖色主題、字幕匯出、語言轉換、字幕排錯、字幕轉碼、GPU 設定與選用的 AI 字幕優化。
 
-目前版本：**v4.14.0 · 2026-11-04**
+目前版本：**v4.14.1 · 2026-11-04**
 
 版本變更請見 [版本紀錄](CHANGELOG.md)。
 
@@ -12,9 +12,9 @@
 
 | 系統 | 下載檔案 | 安裝方式 |
 | --- | --- | --- |
-| Windows 10 1903 以上／11 x64 | `TJKSub-4.14.0-windows-x64-setup.exe` | 執行安裝程式，安裝至目前使用者帳戶 |
-| Mac Apple Silicon（M 系列） | `TJKSub-4.14.0-macos-arm64.dmg` | 開啟後把 TJKSub 拖進 Applications |
-| Mac Intel | `TJKSub-4.14.0-macos-x86_64.dmg` | 開啟後把 TJKSub 拖進 Applications |
+| Windows 10 1903 以上／11 x64 | `TJKSub-4.14.1-windows-x64-setup.exe` | 執行安裝程式，安裝至目前使用者帳戶 |
+| Mac Apple Silicon（M 系列） | `TJKSub-4.14.1-macos-arm64.dmg` | 開啟後把 TJKSub 拖進 Applications |
+| Mac Intel | `TJKSub-4.14.1-macos-x86_64.dmg` | 開啟後把 TJKSub 拖進 Applications |
 
 Mac 需求為 macOS 12 以上及可用的 Metal GPU。Windows 需求為 x64 處理器、支援 Vulkan 的 GPU 與原廠驅動；Windows ARM 尚未支援。另提供 Windows portable ZIP 與 Mac app ZIP。
 
@@ -92,7 +92,17 @@ Mac Apple Silicon 已完成 Metal 實際音訊轉錄與 SRT／TXT 匯出測試�
 
 格式依據參考 [美國國會圖書館的 SRT 說明](https://www.loc.gov/preservation/digital/formats/fdd/fdd000569.shtml)。字幕只匯入一部分，也可能與多餘換行或時間安排有關，見 [Simon Says 的匯入排錯說明](https://www.simonsaysai.com/help/5072306-srt-subtitle-file-does-not-import-troubleshooting)。
 
-自動驗證涵蓋 92 項功能測試與四語／深淺色／四分頁的 32 種小視窗組合，並產生 100%／125%／150%／200% 縮放截圖。SRT 尚未在 Premiere 或其他剪輯軟體實機匯入驗證。API 翻譯與優化使用模擬服務測試，未向付費 API 發送測試內容。
+自動驗證涵蓋 100 項功能測試與四語／深淺色／四分頁的 32 種小視窗組合，並產生 100%／125%／150%／200% 縮放截圖。SRT 尚未在 Premiere 或其他剪輯軟體實機匯入驗證。API 翻譯與優化使用模擬服務測試，未向付費 API 發送測試內容。
+
+## 拖放匯入
+
+除了語音轉錄外，三個字幕工具也支援直接拖入檔案。將檔案拖到虛線內容區或文字框，區域會高亮並提示「放開即可匯入」；也可放在目前分頁的空白處。原有匯入按鈕仍可使用。
+
+- 語言轉換：單一 TXT／SRT。
+- 字幕排錯：單一 SRT。
+- 字幕轉碼：單一支援的文字字幕（SRT、ASS、SSA、VTT、SBV、SUB、TXT）。
+
+一次請拖入一個檔案；資料夾、網頁連結、不符格式或處理中的新檔案會被拒收並提示。拖放僅匯入內容，原始檔不會被移動，也不會自動開始翻譯或付費 API 請求。
 
 ## 字幕轉碼（離線 UTF-8）
 

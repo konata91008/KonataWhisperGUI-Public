@@ -7,6 +7,8 @@ from PyQt5.QtWidgets import (
     QPlainTextEdit, QPushButton, QVBoxLayout, QWidget, QFrame, QSizePolicy,
 )
 
+from .file_drop import FileDropZone
+
 from core.chinese_conversion import ConversionError, convert_text, read_text_file
 from core.conversion_translations import conversion_strings
 from core.interface_translations import interface_strings
@@ -121,11 +123,13 @@ class ConversionTab(QWidget):
         editors.setSpacing(16)
         self.sourceLabel, self.resultLabel = QLabel(objectName="SectionTitle"), QLabel(objectName="SectionTitle")
         self.sourceEdit, self.resultEdit = QPlainTextEdit(objectName="ConversionSource"), QPlainTextEdit(objectName="ConversionResult")
-        # File imports are explicit; dropping a URL must not insert its path.
-        self.sourceEdit.setAcceptDrops(False)
         self.resultEdit.setReadOnly(True)
         for title, editor in ((self.sourceLabel, self.sourceEdit), (self.resultLabel, self.resultEdit)):
-            card = QFrame(objectName='EditorCard')
+            if editor is self.sourceEdit:
+                self.dropZone = FileDropZone(self, ('.txt', '.srt'), 'TXT / SRT')
+                card = self.dropZone
+            else:
+                card = QFrame(objectName='EditorCard')
             column = QVBoxLayout(card)
             column.setContentsMargins(18, 12, 18, 10)
             column.setSpacing(8)
@@ -133,6 +137,9 @@ class ConversionTab(QWidget):
             editor.setMinimumHeight(100)
             editor.document().setDocumentMargin(6)
             column.addWidget(title)
+            if editor is self.sourceEdit:
+                column.addWidget(self.dropZone.hint)
+            self.dropZone.attach_editor(editor)
             column.addWidget(editor, 1)
             editors.addWidget(card, 1)
         layout.addLayout(editors, 1)
@@ -173,6 +180,7 @@ class ConversionTab(QWidget):
         self.retranslate_ui(owner.current_lang)
 
     def retranslate_ui(self, language):
+        self.dropZone.retranslate_ui(language)
         self.t = conversion_strings(language)
         appearance = interface_strings(language)
         self.headingLabel.setText(appearance['conversion_title'])
@@ -239,6 +247,7 @@ class ConversionTab(QWidget):
         self.statusLabel.style().polish(self.statusLabel)
 
     def refresh_controls(self):
+        self.dropZone.refresh()
         busy = self.is_busy()
         source, result = self.sourceEdit.toPlainText(), self.resultEdit.toPlainText()
         self.sourceEdit.setReadOnly(busy)
@@ -273,7 +282,11 @@ class ConversionTab(QWidget):
         if self.is_busy():
             return
         filename, _ = QFileDialog.getOpenFileName(self, self.t['import'], '', self.t['file_filter'])
-        if not filename:
+        if filename:
+            self.load_path(filename)
+
+    def load_path(self, filename):
+        if self.is_busy():
             return
         try:
             content = read_text_file(filename)

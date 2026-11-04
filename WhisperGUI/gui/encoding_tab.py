@@ -5,6 +5,8 @@ from PyQt5.QtCore import Qt, QThread, pyqtSignal, QIODevice, QSaveFile
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, QLabel,
     QPushButton, QComboBox, QPlainTextEdit, QCheckBox, QFrame, QSizePolicy, QFileDialog)
 
+from .file_drop import FileDropZone
+
 from core.encoding_translations import encoding_strings, ENCODING_LABELS
 from core.interface_translations import interface_strings
 from core.subtitle_encoding import (EncodingError, ENCODINGS, PREVIEW_CHARS, SUBTITLE_SUFFIXES,
@@ -86,18 +88,18 @@ class EncodingTab(QWidget):
         options.setColumnStretch(1, 1)
         layout.addLayout(options)
 
-        card = QFrame(objectName='EditorCard')
+        self.dropZone = FileDropZone(self, SUBTITLE_SUFFIXES, 'SRT / ASS / VTT / TXT…')
+        card = self.dropZone
         card_layout = QVBoxLayout(card)
         card_layout.setContentsMargins(14, 12, 14, 12)
         preview_heading = QHBoxLayout()
-        self.previewLabel = QLabel(objectName='SectionLabel')
         self.detectedLabel = self.wrapped_label('SubtleLabel')
-        preview_heading.addWidget(self.previewLabel)
+        preview_heading.addWidget(self.dropZone.hint, 1)
         preview_heading.addWidget(self.detectedLabel, 1)
         card_layout.addLayout(preview_heading)
         self.previewEdit = QPlainTextEdit(objectName='ConversionResult')
         self.previewEdit.setReadOnly(True)
-        self.previewEdit.setAcceptDrops(False)
+        self.dropZone.attach_editor(self.previewEdit)
         self.previewEdit.setMinimumHeight(100)
         self.previewEdit.document().setDocumentMargin(6)
         card_layout.addWidget(self.previewEdit, 1)
@@ -133,11 +135,12 @@ class EncodingTab(QWidget):
         return label
 
     def retranslate_ui(self, language):
+        self.dropZone.retranslate_ui(language)
         self.t = encoding_strings(language)
         for widget, key in ((self.headingLabel, 'title'), (self.hintLabel, 'hint'),
                             (self.importButton, 'import'), (self.clearButton, 'clear'),
                             (self.sourceLabel, 'source_encoding'), (self.outputLabel, 'output_encoding'),
-                            (self.previewLabel, 'preview'), (self.ansiHint, 'ansi_hint'),
+                            (self.ansiHint, 'ansi_hint'),
                             (self.confirmCheck, 'confirm'), (self.saveButton, 'save')):
             widget.setText(self.t[key])
         self.offlineBadge.setText('●  ' + interface_strings(language)['offline'])
@@ -159,6 +162,7 @@ class EncodingTab(QWidget):
         return self.worker is not None
 
     def refresh_controls(self, *_):
+        self.dropZone.refresh()
         busy = self.is_busy()
         self.importButton.setEnabled(not busy)
         self.clearButton.setEnabled(not busy)

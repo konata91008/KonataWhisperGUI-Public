@@ -358,6 +358,7 @@ class WhisperGUI(QWidget):
         self.mainTabs.addTab(self.conversionTab, '')
         self.mainTabs.addTab(self.diagnosticsTab, '')
         self.mainTabs.addTab(self.encodingTab, '')
+        self.mainTabs.currentChanged.connect(self.clear_drop_feedback)
 
         content_inner_layout = QVBoxLayout()
         content_inner_layout.setContentsMargins(26, 24, 26, 24)
@@ -701,9 +702,17 @@ class WhisperGUI(QWidget):
         d = QFileDialog.getExistingDirectory(self, "選擇儲存資料夾")
         if d: self.savePathEdit.setText(d)
 
+    def clear_drop_feedback(self, *_):
+        for page in (self.conversionTab, self.diagnosticsTab, self.encodingTab):
+            page.dropZone.clear_feedback()
+        self.fileList.setProperty("dragging", False)
+        self.style().unpolish(self.fileList)
+        self.style().polish(self.fileList)
+
     def dragEnterEvent(self, event):
-        if self.mainTabs.currentWidget() is not self.transcriptionPage:
-            event.ignore()
+        page = self.mainTabs.currentWidget()
+        if page is not self.transcriptionPage:
+            page.dropZone.dragEnterEvent(event)
             return
         if event.mimeData().hasUrls():
             event.acceptProposedAction()
@@ -712,16 +721,19 @@ class WhisperGUI(QWidget):
         else:
             event.ignore()
 
+    def dragMoveEvent(self, event):
+        self.dragEnterEvent(event)
+
     def dragLeaveEvent(self, event):
-        self.fileList.setProperty("dragging", False)
-        self.style().unpolish(self.fileList); self.style().polish(self.fileList)
+        self.clear_drop_feedback()
+        event.accept()
 
     def dropEvent(self, event):
-        if self.mainTabs.currentWidget() is not self.transcriptionPage:
-            event.ignore()
+        page = self.mainTabs.currentWidget()
+        if page is not self.transcriptionPage:
+            page.dropZone.dropEvent(event)
             return
-        self.fileList.setProperty("dragging", False)
-        self.style().unpolish(self.fileList); self.style().polish(self.fileList)
+        self.clear_drop_feedback()
         paths = [url.toLocalFile() for url in event.mimeData().urls()]
         self.add_files(paths)
 

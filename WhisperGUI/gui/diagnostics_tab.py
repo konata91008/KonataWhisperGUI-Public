@@ -7,6 +7,8 @@ from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushBut
     QPlainTextEdit, QCheckBox, QComboBox, QFrame, QSplitter, QTabWidget, QTableView,
     QHeaderView, QAbstractItemView, QSizePolicy, QFileDialog, QApplication)
 
+from .file_drop import FileDropZone
+
 from core.chinese_conversion import ConversionError, read_text_file
 from core.conversion_translations import conversion_strings
 from core.diagnostic_translations import diagnostic_strings
@@ -111,21 +113,24 @@ class DiagnosticsTab(QWidget):
         splitter = QSplitter(Qt.Horizontal)
         splitter.setChildrenCollapsible(False)
         splitter.setHandleWidth(12)
-        editors = QFrame(objectName='EditorCard')
+        self.dropZone = FileDropZone(self, ('.srt',), 'SRT')
+        editors = self.dropZone
         editors.setMinimumWidth(280)
         editor_layout = QVBoxLayout(editors)
         editor_layout.setContentsMargins(12, 10, 12, 10)
         self.editorTabs = QTabWidget(objectName='DiagnosticEditors')
         self.sourceEdit = QPlainTextEdit(objectName='ConversionSource')
         self.previewEdit = QPlainTextEdit(objectName='ConversionResult')
-        self.sourceEdit.setAcceptDrops(False)
         self.previewEdit.setReadOnly(True)
         for editor in (self.sourceEdit, self.previewEdit):
             editor.setMinimumHeight(140)
             editor.document().setDocumentMargin(6)
         self.editorTabs.addTab(self.sourceEdit, '')
         self.editorTabs.addTab(self.previewEdit, '')
+        editor_layout.addWidget(self.dropZone.hint)
         editor_layout.addWidget(self.editorTabs)
+        for editor in (self.sourceEdit, self.previewEdit):
+            self.dropZone.attach_editor(editor)
         splitter.addWidget(editors)
 
         results = QFrame(objectName='EditorCard')
@@ -195,6 +200,7 @@ class DiagnosticsTab(QWidget):
         self.retranslate_ui(owner.current_lang)
 
     def retranslate_ui(self, language):
+        self.dropZone.retranslate_ui(language)
         self.t = diagnostic_strings(language)
         self.common = conversion_strings(language)
         self.headingLabel.setText(self.t['title'])
@@ -232,6 +238,7 @@ class DiagnosticsTab(QWidget):
         self.statusLabel.style().polish(self.statusLabel)
 
     def refresh_controls(self):
+        self.dropZone.refresh()
         busy = self.is_busy()
         self.sourceEdit.setReadOnly(busy)
         for control in (self.importButton, self.clearButton, self.sortCheck, self.trimCheck):
@@ -268,7 +275,11 @@ class DiagnosticsTab(QWidget):
         if self.is_busy():
             return
         filename, _ = QFileDialog.getOpenFileName(self, self.t['import'], '', 'SubRip (*.srt)')
-        if not filename:
+        if filename:
+            self.load_path(filename)
+
+    def load_path(self, filename):
+        if self.is_busy():
             return
         try:
             content = read_text_file(filename)

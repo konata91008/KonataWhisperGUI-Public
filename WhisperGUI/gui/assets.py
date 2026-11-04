@@ -385,6 +385,14 @@ QMenu::indicator {
 QFrame#PanelCard, QFrame#EditorCard {
     background: {SURFACE}; border: 1px solid {BORDER_PRIMARY}; border-radius: 16px;
 }
+QFrame#SubtitleDropZone {
+    background: {SURFACE}; border: 1px dashed {BORDER_SECONDARY}; border-radius: 16px;
+}
+QFrame#SubtitleDropZone[dropState="active"] {
+    background: {BG_SECONDARY}; border: 2px solid {ACCENT};
+}
+QFrame#SubtitleDropZone[dropState="error"] { border-color: {DANGER}; }
+#DropHint { font-size: 12px; font-weight: 500; color: {ACCENT}; padding: 2px 0px; }
 QFrame#ToolbarCard {
     background: {SURFACE_ALT}; border: 1px solid {BORDER_PRIMARY}; border-radius: 12px;
 }

@@ -17,8 +17,8 @@ def run(report_path):
         with tempfile.TemporaryDirectory(prefix='tjksub-smoke-') as temporary:
             os.environ['TJKSUB_DATA_DIR'] = str(Path(temporary) / 'data')
             from PyQt5.QtWidgets import QApplication
-            from PyQt5.QtCore import QSettings
-            from PyQt5.QtGui import QFontDatabase
+            from PyQt5.QtCore import QSettings, Qt, QMimeData, QUrl, QPoint, QPointF
+            from PyQt5.QtGui import QFontDatabase, QDragEnterEvent, QDropEvent
             from PyQt5.QtTest import QTest
             from core.paths import resource_root, data_root, is_packaged, bundled_runtime
             from core.version import VERSION_INFO
@@ -36,9 +36,22 @@ def run(report_path):
             assert gui.brandMark.renderer.isValid()
             assert data_root().is_relative_to(Path(temporary).resolve())
             checks.extend(['four-tabs', 'svg-logo', 'isolated-user-data'])
+            def drop_file(page, filename, target):
+                gui.mainTabs.setCurrentWidget(page)
+                mime = QMimeData()
+                mime.setUrls([QUrl.fromLocalFile(str(filename))])
+                enter = QDragEnterEvent(QPoint(10, 10), Qt.CopyAction, mime, Qt.LeftButton, Qt.NoModifier)
+                app.sendEvent(target, enter)
+                assert enter.isAccepted()
+                drop = QDropEvent(QPointF(10, 10), Qt.CopyAction, mime, Qt.LeftButton, Qt.NoModifier)
+                app.sendEvent(target, drop)
+                assert drop.isAccepted() and drop.dropAction() == Qt.CopyAction
+
             tab = gui.conversionTab
-            gui.mainTabs.setCurrentIndex(1)
-            tab.sourceEdit.setPlainText('繁體中文：頭髮與發展。')
+            conversion_source = Path(temporary) / '拖曳 文字.txt'
+            conversion_source.write_text('繁體中文：頭髮與發展。', encoding='utf-8')
+            drop_file(tab, conversion_source, tab.sourceEdit.viewport())
+            assert tab.sourceEdit.toPlainText() == '繁體中文：頭髮與發展。'
             tab.start_conversion()
             deadline = time.monotonic() + 20
             while tab.is_busy() and time.monotonic() < deadline:
@@ -47,6 +60,10 @@ def run(report_path):
             assert tab.resultEdit.toPlainText() == '繁体中文：头发与发展。'
             checks.append('bundled-opencc-conversion')
             subtitle = '1\n00:00:01,000 --> 00:00:04,000\nFirst\n\n2\n00:00:03,000 --> 00:00:05,000\nSecond\n\n'
+            diagnostics_source = Path(temporary) / '拖曳 排錯.srt'
+            diagnostics_source.write_text(subtitle, encoding='utf-8')
+            drop_file(gui.diagnosticsTab, diagnostics_source, gui.diagnosticsTab.dropZone)
+            assert gui.diagnosticsTab.sourceEdit.toPlainText() == subtitle
             fixed = repair_srt(subtitle, trim_overlaps=True)
             assert '00:00:02,999' in fixed.text and not fixed.checked.issues
             checks.append('subtitle-repair')
@@ -54,7 +71,7 @@ def run(report_path):
             encoding_source = Path(temporary) / '繁體字幕.srt'
             encoding_text = '1\r\n00:00:01,000 --> 00:00:03,000\r\n這是一段繁體中文字幕，讓電腦能夠正常顯示所有文字。\r\n\r\n'
             encoding_source.write_bytes(encoding_text.encode('cp950'))
-            encoding_tab.load_path(encoding_source)
+            drop_file(encoding_tab, encoding_source, encoding_tab.previewEdit.viewport())
             deadline = time.monotonic() + 20
             while encoding_tab.is_busy() and time.monotonic() < deadline:
                 QTest.qWait(10)
@@ -72,6 +89,7 @@ def run(report_path):
                 # Exercise dynamic Python codecs inside the frozen application too.
                 assert decode_subtitle('Subtitle\r\n'.encode(codec), codec).text == 'Subtitle\r\n'
             checks.append('subtitle-encoding-detection-and-utf8-export')
+            checks.append('subtitle-file-drag-and-drop')
             assert len(ssl_context().get_ca_certs()) > 0
             checks.append('https-trust-store')
             if is_packaged():

@@ -14,8 +14,8 @@ ROOT = Path(__file__).resolve().parents[1]
 def render(output, scale):
     output.parent.mkdir(parents=True, exist_ok=True)
     sys.path.insert(0, str(ROOT / 'WhisperGUI'))
-    from PyQt5.QtCore import QSettings, QRect, QPoint
-    from PyQt5.QtGui import QImage, QPainter, QColor
+    from PyQt5.QtCore import QSettings, QRect, QPoint, Qt, QMimeData, QUrl
+    from PyQt5.QtGui import QImage, QPainter, QColor, QDragEnterEvent, QDragLeaveEvent
     from PyQt5.QtWidgets import QApplication
     from PyQt5.QtTest import QTest
     from gui.main_window import WhisperGUI
@@ -49,6 +49,17 @@ def render(output, scale):
                     captured = window.grab(QRect(bar.mapTo(window, QPoint()), bar.size())).toImage()
                     captured.setDevicePixelRatio(1)
                     images.append(captured)
+                    if selected > 0:
+                        page = window.mainTabs.currentWidget()
+                        window.grab().save(str(output.parent / f'page-{selected}-{language}-{theme}-{scale}.png'))
+                        mime = QMimeData()
+                        mime.setUrls([QUrl.fromLocalFile(str(sample))])
+                        enter = QDragEnterEvent(QPoint(10, 10), Qt.CopyAction, mime, Qt.LeftButton, Qt.NoModifier)
+                        app.sendEvent(page.dropZone, enter)
+                        assert enter.isAccepted()
+                        app.processEvents()
+                        window.grab().save(str(output.parent / f'drop-{selected}-{language}-{theme}-{scale}.png'))
+                        app.sendEvent(page.dropZone, QDragLeaveEvent())
                 rows.append((f'{language} / {"dark" if theme else "light"}', images))
                 window.grab().save(str(output.parent / f'encoding-{language}-{theme}-{scale}.png'))
         window.close()
