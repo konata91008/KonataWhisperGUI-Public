@@ -2,7 +2,7 @@
 
 支援 macOS 與 Windows 的 whisper.cpp 語音轉錄介面，提供秋日暖色主題、字幕匯出、語言轉換、字幕排錯、字幕轉碼、GPU 設定與選用的 AI 字幕優化。
 
-目前版本：**v4.14.1 · 2026-11-04**
+目前版本：**v4.15.0 · 2026-11-17**
 
 版本變更請見 [版本紀錄](CHANGELOG.md)。
 
@@ -12,9 +12,9 @@
 
 | 系統 | 下載檔案 | 安裝方式 |
 | --- | --- | --- |
-| Windows 10 1903 以上／11 x64 | `TJKSub-4.14.1-windows-x64-setup.exe` | 執行安裝程式，安裝至目前使用者帳戶 |
-| Mac Apple Silicon（M 系列） | `TJKSub-4.14.1-macos-arm64.dmg` | 開啟後把 TJKSub 拖進 Applications |
-| Mac Intel | `TJKSub-4.14.1-macos-x86_64.dmg` | 開啟後把 TJKSub 拖進 Applications |
+| Windows 10 1903 以上／11 x64 | `TJKSub-4.15.0-windows-x64-setup.exe` | 執行安裝程式，安裝至目前使用者帳戶 |
+| Mac Apple Silicon（M 系列） | `TJKSub-4.15.0-macos-arm64.dmg` | 開啟後把 TJKSub 拖進 Applications |
+| Mac Intel | `TJKSub-4.15.0-macos-x86_64.dmg` | 開啟後把 TJKSub 拖進 Applications |
 
 Mac 需求為 macOS 12 以上及可用的 Metal GPU。Windows 需求為 x64 處理器、支援 Vulkan 的 GPU 與原廠驅動；Windows ARM 尚未支援。另提供 Windows portable ZIP 與 Mac app ZIP。
 
@@ -22,7 +22,7 @@ Mac 需求為 macOS 12 以上及可用的 Metal GPU。Windows 需求為 x64 處�
 
 目前 Windows 程式未購買程式碼簽章，Mac 使用 ad hoc 簽章、尚未經 Developer ID 簽署及 Apple 公證，因此首次開啟可能出現系統警告或被阻擋。請確認檔案來自本專案 Release 並比對 SHA256；Mac 若提供「隱私權與安全性 → 強制打開」可依系統提示操作。不需要全域關閉系統安全功能。詳見 [安裝說明](packaging/INSTALL.md)。
 
-模型資料位於 `%LOCALAPPDATA%/TJKSub/models`（Windows）或 `~/Library/Application Support/TJKSub/models`（Mac）；程式搬移、更新與移除不會自動刪除這些模型。安裝版的「檢查更新」會開啟正式 Release 頁面，下載新版本後重新安裝即可。
+模型資料位於 `%LOCALAPPDATA%/TJKSub/models`（Windows）或 `~/Library/Application Support/TJKSub/models`（Mac）；程式搬移、更新與移除不會自動刪除這些模型。安裝版可從設定內「檢查 GitHub 更新」比對正式版本、下載對應安裝包並驗證 SHA-256，再依系統進行更新。
 
 ## 從原始碼啟動（開發者）
 
@@ -126,7 +126,17 @@ ANSI 並非單一編碼，自動判讀只是推測，尤其短字幕仍需人工
 
 ## 檢查更新
 
-安裝版會開啟 GitHub Releases 下載頁。以下 Git 更新流程僅適用原始碼版。
+**安裝版（v4.15.0 起）：** 齒輪 → 檢查 GitHub 更新 → 下載更新。畫面顯示目前／新版版本、發佈日期、更新內容與下載進度，可取消下載。只讀取官方公開儲存庫的最新正式 Release，不需 GitHub 登入；不安裝草稿、測試版或較舊版本。
+
+下載會依 Windows 安裝版／免安裝版、Mac Apple Silicon／Intel 選取檔案；下載完成與開啟前均驗證 SHA-256。取消、斷線、驗證失敗時不啟動安裝。下載存放於使用者模型目錄同層的 `updates` 資料夾。
+
+- **Windows 安裝版：** 點「立即更新」，確認已匯出字幕後開啟新版安裝精靈並關閉 TJKSub，沿用目前安裝位置；精靈保持可見，不強制終止其他程式或重新啟動 Windows。
+- **Windows 免安裝版：** 下載完整 ZIP，顯示下載資料夾並關閉程式；請解壓縮整個 TJKSub 資料夾到新位置，不要只替換 EXE。不會改動另一份已註冊的安裝。
+- **Mac：** 點「開啟 DMG 更新」，確認後關閉 TJKSub，再拖曳至「應用程式」並選擇取代。這一版提供引導更新，尚非自動替換應用程式。
+- 更新前需完成正在執行的工作並匯出要保留的字幕；模型與已儲存設定會保留，編輯中的內容與 API Key 不會跨重啟保留。
+- 舊版須先手動安裝一次 v4.15.0 或更新版本，才具備這個程式內下載功能。
+
+以下 Git 更新流程僅適用**原始碼版**；不會替換自行編譯的 CUDA 引擎。
 
 齒輪 → 檢查 GitHub 更新 → 確認下載 → 選擇立即或稍後重啟。
 

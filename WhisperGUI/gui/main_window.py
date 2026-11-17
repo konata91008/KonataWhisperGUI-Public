@@ -24,6 +24,8 @@ from core.paths import is_packaged, data_root, bundled_runtime, restart_command
 from core.distribution_translations import distribution_strings
 from core.update_translations import update_strings
 from .update_dialog import UpdateDialog
+from .release_update_dialog import ReleaseUpdateDialog, app_busy
+from core.release_translations import release_strings
 from .conversion_tab import ConversionTab
 from .diagnostics_tab import DiagnosticsTab
 from .encoding_tab import EncodingTab
@@ -872,25 +874,19 @@ class WhisperGUI(QWidget):
 
     def open_update_dialog(self):
         if is_packaged():
-            texts = distribution_strings(self.current_lang)
-            from .widgets import CustomDialog
-            dialog = CustomDialog(self)
-            dialog.setWindowTitle(texts['updates_title'])
-            dialog.setStyleSheet(self.styleSheet())
-            dialog.setThemeColors(self.current_colors)
-            layout = QVBoxLayout(dialog)
-            label = QLabel(texts['updates'])
-            label.setWordWrap(True)
-            layout.addWidget(label)
-            open_button = QPushButton(texts['open_releases'], objectName='PrimaryButton')
-            open_button.clicked.connect(lambda: QDesktopServices.openUrl(QUrl('https://github.com/konata91008/KonataWhisperGUI-Public/releases/latest')))
-            layout.addWidget(open_button)
-            close_button = QPushButton(texts['close'])
-            close_button.clicked.connect(dialog.accept)
-            layout.addWidget(close_button)
-            dialog.setMinimumWidth(520)
-            dialog.exec_()
-            dialog.deleteLater()
+            if app_busy(self):
+                texts = release_strings(self.current_lang)
+                self.show_message('info', texts['title'], texts['busy'])
+                return
+            if self.update_dialog and self.update_dialog.isVisible():
+                self.update_dialog.raise_()
+                self.update_dialog.activateWindow()
+                return
+            if self.update_dialog:
+                self.update_dialog.deleteLater()
+            self.update_dialog = ReleaseUpdateDialog(self)
+            self.update_dialog.show()
+            self.update_dialog.check()
             return
         if self.conversionTab.is_busy() or self.diagnosticsTab.is_busy() or self.encodingTab.is_busy(): return
         if self.setup_dialog and self.setup_dialog.is_busy(): return

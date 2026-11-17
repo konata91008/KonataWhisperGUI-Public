@@ -62,6 +62,16 @@ def render(output, scale):
                         app.sendEvent(page.dropZone, QDragLeaveEvent())
                 rows.append((f'{language} / {"dark" if theme else "light"}', images))
                 window.grab().save(str(output.parent / f'encoding-{language}-{theme}-{scale}.png'))
+                from core.release_updater import ReleaseUpdater, ReleaseInfo
+                from gui.release_update_dialog import ReleaseUpdateDialog
+                update = ReleaseUpdateDialog(window, ReleaseUpdater(kind='windows-setup', folder=Path(temp) / 'updates'))
+                update.on_checked(ReleaseInfo('4.16.0', '2026-11-17', 'TJKSub 更新內容 / Release notes\n\n畫面測試範例 / UI preview fixture', 'windows-setup', True))
+                update.refresh_buttons()
+                update.show()
+                QTest.qWait(30)
+                update.grab().save(str(output.parent / f'update-{language}-{theme}-{scale}.png'))
+                update.close()
+                update.deleteLater()
         window.close()
     gap, label_height = 12, 22
     width = max(sum(image.width() for image in images) + gap * (len(images) + 1) for _, images in rows)

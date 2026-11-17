@@ -90,6 +90,50 @@ def run(report_path):
                 assert decode_subtitle('Subtitle\r\n'.encode(codec), codec).text == 'Subtitle\r\n'
             checks.append('subtitle-encoding-detection-and-utf8-export')
             checks.append('subtitle-file-drag-and-drop')
+            # Exercise the actual release dialog and streaming verifier in frozen builds,
+            # using in-memory responses. Never download or execute an installer here.
+            import hashlib
+            import io
+            from core.release_updater import ReleaseUpdater, API_URL, RELEASES_URL, package_kind
+            from gui.release_update_dialog import ReleaseUpdateDialog
+            update_kind = package_kind() if is_packaged() else 'macos-arm64'
+            suffix, label = {
+                'windows-setup': ('windows-x64-setup.exe', 'windows-amd64'),
+                'windows-portable': ('windows-x64-portable.zip', 'windows-amd64'),
+                'macos-arm64': ('macos-arm64.dmg', 'darwin-arm64'),
+                'macos-x86_64': ('macos-x86_64.dmg', 'darwin-x86_64'),
+            }[update_kind]
+            name = 'TJKSub-99.0.0-' + suffix
+            checksum = 'SHA256SUMS-' + label + '.txt'
+            base = RELEASES_URL + '/download/v99.0.0/'
+            payload = b'Offline update verifier fixture, never executed'
+            digest = hashlib.sha256(payload).hexdigest()
+            manifest = (digest + '  ' + name + '\n').encode()
+            release = dict(tag_name='v99.0.0', published_at='2026-11-17T00:00:00Z',
+                           draft=False, prerelease=False, body='Offline update test', assets=[
+                dict(name=n, size=len(b), state='uploaded', browser_download_url=base + n)
+                for n, b in ((name, payload), (checksum, manifest))])
+            responses = {API_URL: json.dumps(release).encode(), base + name: payload, base + checksum: manifest}
+            updater = ReleaseUpdater(update_kind, '0.0.0', data_root() / 'updates', lambda url: io.BytesIO(responses[url]))
+            dialog = ReleaseUpdateDialog(gui, updater)
+            gui.update_dialog = dialog
+            dialog.show()
+            dialog.check()
+            def wait_update():
+                deadline = time.monotonic() + 20
+                while dialog.is_busy() and time.monotonic() < deadline:
+                    QTest.qWait(10)
+                assert not dialog.is_busy()
+            wait_update()
+            assert dialog.info.available and dialog.downloaded is None
+            dialog.download()
+            wait_update()
+            assert dialog.downloaded.path.read_bytes() == payload
+            assert updater.verify(dialog.downloaded) == dialog.downloaded
+            assert dialog.apply_button.isEnabled()
+            dialog.grab().save(str(report_path.with_name(report_path.stem + '-update.png')))
+            dialog.close()
+            checks.append('release-update-check-download-sha256')
             assert len(ssl_context().get_ca_certs()) > 0
             checks.append('https-trust-store')
             if is_packaged():
@@ -114,7 +158,7 @@ def run(report_path):
             gui.grab().save(str(report_path.with_suffix('.png')))
             gui.close()
             gui = None
-            report = {'ok': True, 'version': VERSION_INFO['version'], 'packaged': is_packaged(), 'checks': checks}
+            report = {'ok': True, 'version': VERSION_INFO['version'], 'packaged': is_packaged(), 'checks': checks, 'update_package_kind': update_kind}
     except Exception:
         report = {'ok': False, 'checks': checks, 'error': traceback.format_exc()}
     finally:
